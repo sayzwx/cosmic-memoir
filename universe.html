@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="基于天体物理隐喻的交互式回忆录">
+  <title>CosmicMemoir - 宇宙回忆录</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="./js/auth-guard.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0a1a;
+      color: #e0e0e0;
+    }
+    #main-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+    #ui-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .font-heading { font-family: 'Noto Serif SC', serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0a0a1a;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s ease;
+    }
+    #loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .spinner {
+      width: 64px;
+      height: 64px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top-color: rgba(170,140,255,0.8);
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .progress-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: all 0.4s ease;
+    }
+    .progress-dot.active {
+      background: rgba(170,140,255,0.9);
+      box-shadow: 0 0 8px rgba(170,140,255,0.6);
+      width: 20px;
+      border-radius: 3px;
+    }
+    .narrative-text {
+      opacity: 0;
+      transition: opacity 1.5s ease;
+    }
+    .narrative-text.visible {
+      opacity: 1;
+    }
+    .hud-line {
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    .hud-line.visible {
+      opacity: 0.7;
+    }
+    .nav-btn {
+      pointer-events: auto;
+      cursor: pointer;
+      transition: color 0.3s ease, transform 0.3s ease;
+    }
+    .nav-btn:hover {
+      color: #c8b8ff;
+      transform: scale(1.15);
+    }
+    .nav-btn:active {
+      transform: scale(0.95);
+    }
+    .nav-btn:disabled {
+      opacity: 0.2;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="main-canvas"></canvas>
+
+  <div id="ui-overlay">
+    <div id="chapter-title" class="absolute top-6 left-6 md:top-8 md:left-8">
+      <p id="chapter-label" class="font-mono text-xs text-gray-500 tracking-[0.3em] uppercase"></p>
+      <h1 id="chapter-name" class="font-heading text-xl md:text-2xl font-light mt-2 text-gray-200"></h1>
+    </div>
+
+    <div id="physics-hud" class="absolute top-6 right-6 md:top-8 md:right-8 font-mono text-xs text-gray-400 text-right space-y-1">
+    </div>
+
+    <div id="narrative-layer" class="absolute inset-0 flex items-center justify-center px-8">
+      <div class="max-w-2xl text-center">
+        <p id="narrative-primary" class="narrative-text font-heading text-base md:text-lg leading-loose text-gray-300 tracking-wide"></p>
+        <p id="narrative-secondary" class="narrative-text font-heading text-sm text-gray-500 mt-6 italic"></p>
+      </div>
+    </div>
+
+    <div id="nav-bar" class="absolute bottom-6 md:bottom-8 left-0 right-0 flex justify-center items-center gap-8">
+      <button id="prev-btn" class="nav-btn text-gray-500" aria-label="上一段记忆">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <div id="progress-dots" class="flex gap-2 items-center"></div>
+      <button id="next-btn" class="nav-btn text-gray-500" aria-label="下一段记忆">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="loading-screen">
+    <div class="text-center">
+      <div class="spinner mx-auto mb-6"></div>
+      <p class="font-heading text-gray-500 tracking-[0.3em] text-sm">正在展开宇宙</p>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

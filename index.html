@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CosmicMemoir</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000011;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Noto Serif SC', serif;
+        }
+        .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        .loader-ring {
+            width: 64px;
+            height: 64px;
+            border: 2px solid rgba(100, 180, 255, 0.15);
+            border-top-color: rgba(100, 180, 255, 0.8);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loader-text {
+            color: #4a5568;
+            font-size: 12px;
+            letter-spacing: 0.15em;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <div class="loader-ring"></div>
+        <div class="loader-text">INITIALIZING COSMIC MEMOIR</div>
+    </div>
+    <script>
+        (function () {
+            var TOKEN_KEY = 'cm_token';
+            var LOGIN_TIME_KEY = 'cm_loginTime';
+            var SESSION_TIMEOUT = 3600000;
+
+            var token = sessionStorage.getItem(TOKEN_KEY);
+            var loginTime = sessionStorage.getItem(LOGIN_TIME_KEY);
+
+            if (token && loginTime) {
+                var elapsed = Date.now() - parseInt(loginTime, 10);
+                if (elapsed < SESSION_TIMEOUT) {
+                    window.location.replace('./universe.html');
+                    return;
+                }
+            }
+
+            sessionStorage.removeItem(TOKEN_KEY);
+            sessionStorage.removeItem(LOGIN_TIME_KEY);
+            window.location.replace('./login.html');
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+{
+  "universeConfig": {
+    "globalConstants": {
+      "G": 6.674,
+      "c": 299792,
+      "hubbleParam": 70.0,
+      "planckTime": 5.39
+    },
+    "theme": {
+      "colorSpace": "#000011",
+      "colorNebula": "#2a0a3b",
+      "fontHeading": "Noto Serif SC",
+      "fontMono": "JetBrains Mono"
+    },
+    "audio": {
+      "masterVolume": 0.7,
+      "ambientEnabled": true
+    }
+  },
+  "memories": [
+    {
+      "id": "mem_1998_humidity",
+      "meta": {
+        "title": "空气湿度的权重",
+        "date": "1998-07-15",
+        "chapterIndex": 0,
+        "order": 1,
+        "tags": ["童年", "潜意识", "气候"],
+        "emotionalTemperature": 3200,
+        "isHidden": true,
+        "unlockCondition": "将三个记忆星系的光弧汇聚于一点"
+      },
+      "celestialType": "darkMatter",
+      "narrative": {
+        "prologueText": "这片天区可见质量仅占 5%。其余的东西不发光，但它们在弯曲你的光路。",
+        "bodyText": "你至今所有选择里，都有 1998 年那个下午空气湿度的权重。那时的蝉鸣、瓷砖的反光、母亲切西瓜的声音，并没有被记录下来，但它们弯曲了你此后所有的光路。",
+        "epilogueText": "它不发光，不反射，不存储图像。但它决定了可见物质如何聚集。",
+        "quote": "有些质量，只能透过透镜来推断。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "darkMatter": {
+          "lensStrength": 1.8,
+          "einsteinRadius": 140,
+          "shearFieldOpacity": 0.2,
+          "hiddenMemoryCount": 3,
+          "convergenceThreshold": 0.8
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "drag",
+        "exitBehavior": "fade",
+        "ambientParticles": 300,
+        "cameraStart": {
+          "position": [0, 0, 400],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_1995_shadow",
+      "meta": {
+        "title": "影子的重量",
+        "date": "1995-03-10",
+        "chapterIndex": 0,
+        "order": 2,
+        "tags": ["童年", "潜意识", "旧居"],
+        "emotionalTemperature": 2800,
+        "isHidden": false
+      },
+      "celestialType": "darkMatter",
+      "narrative": {
+        "prologueText": "光线在这里拐了一个不该有的弯。背后一定有什么沉重的东西。",
+        "bodyText": "影子没有形体，却有重量。它压在记忆的地基上，像暗物质压在星系的旋臂上——无形，却让一切保持完整。",
+        "epilogueText": "这是无法被镜头记录的质量。你叫它童年。",
+        "quote": "看不见的东西，决定了看得见的东西如何聚集。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "darkMatter": {
+          "lensStrength": 1.5,
+          "einsteinRadius": 120,
+          "shearFieldOpacity": 0.15,
+          "hiddenMemoryCount": 3,
+          "convergenceThreshold": 0.8
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "drag",
+        "exitBehavior": "fade",
+        "ambientParticles": 250,
+        "cameraStart": {
+          "position": [0, 0, 350],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_2003_departure",
+      "meta": {
+        "title": "远去的背影",
+        "date": "2003-09-01",
+        "chapterIndex": 1,
+        "order": 1,
+        "tags": ["离别", "成长", "火车站"],
+        "emotionalTemperature": 2400,
+        "isHidden": false
+      },
+      "celestialType": "redshift",
+      "narrative": {
+        "prologueText": "z = 8.2，这里的光走了 130 亿年才抵达视网膜。你叫它童年。",
+        "bodyText": "列车启动的那一刻，站台上的人开始后退。光被拉长，红色爬上了所有远去的事物——就像宇宙膨胀把星系的光推向红端。那年夏天的波长正在拉长。再过几个哈勃时间，它就只剩红外余温了。",
+        "epilogueText": "远离，是宇宙最基本的运动。红移不是消失，是变得温柔。",
+        "quote": "本动速度战胜了哈勃流。它不想被膨胀带走。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "redshift": {
+          "hubbleConstant": 70,
+          "maxRedshift": 8.0,
+          "colorTempNow": 6500,
+          "colorTempPast": 2000,
+          "expansionRate": 0.15,
+          "peculiarVelocity": 0.3
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "drag",
+        "exitBehavior": "collapse",
+        "ambientParticles": 200,
+        "cameraStart": {
+          "position": [0, 0, 500],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_2008_train",
+      "meta": {
+        "title": "末班列车",
+        "date": "2008-11-20",
+        "chapterIndex": 1,
+        "order": 2,
+        "tags": ["离别", "城市", "深夜"],
+        "emotionalTemperature": 2200,
+        "isHidden": false
+      },
+      "celestialType": "redshift",
+      "narrative": {
+        "prologueText": "z ≈ 0。这是本地星系群，清晰、吵闹、无法逃避——我们叫它日常。",
+        "bodyText": "末班车的灯光在隧道里拉成一条红线。距离不只是空间——它是光本身被时间拉伸后的颜色。越远的东西越红，越旧的记忆越暖。",
+        "epilogueText": "红移不是消失，是变得温柔。再过几个哈勃时间，它就只剩红外余温了。",
+        "quote": "光走了太久，连颜色都变了。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "redshift": {
+          "hubbleConstant": 70,
+          "maxRedshift": 6.5,
+          "colorTempNow": 6500,
+          "colorTempPast": 2200,
+          "expansionRate": 0.18,
+          "peculiarVelocity": 0.35
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "drag",
+        "exitBehavior": "collapse",
+        "ambientParticles": 180,
+        "cameraStart": {
+          "position": [0, 0, 450],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_2012_silence",
+      "meta": {
+        "title": "沉默的边界",
+        "date": "2012-06-15",
+        "chapterIndex": 2,
+        "order": 1,
+        "tags": ["转折", "沉默", "抉择"],
+        "emotionalTemperature": 3500,
+        "isHidden": false
+      },
+      "celestialType": "eventHorizon",
+      "narrative": {
+        "prologueText": "前方是 2012 年的奇点。警告：视界内的信息无法向外传递。",
+        "bodyText": "有些话到了嘴边就再也说不出口。那是事件视界——一旦越过，连光都无法逃逸。沉默不是空白，是一个引力无限大的点。光在此处环绕了十七圈才坠入黑暗，就像那句话说出口前，我咽下去的十七次犹豫。",
+        "epilogueText": "你已越过事件视界。从此，所有通往过去的路径都指向未来。",
+        "quote": "越过事件视界后，所有通往过去的路径都指向未来。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "eventHorizon": {
+          "schwarzschildRadius": 150,
+          "spin": 0.85,
+          "accretionRate": 0.3,
+          "lensingStrength": 1.2,
+          "timeDilationFactor": 4.0,
+          "photonSphereRadius": 225
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "scroll",
+        "exitBehavior": "noEscape",
+        "ambientParticles": 500,
+        "cameraStart": {
+          "position": [0, 0, 800],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_2008_farewell",
+      "meta": {
+        "title": "那次不可逆的告别",
+        "date": "2008-09-01",
+        "chapterIndex": 2,
+        "order": 2,
+        "tags": ["离别", "故乡", "转折"],
+        "emotionalTemperature": 2800,
+        "isHidden": false
+      },
+      "celestialType": "eventHorizon",
+      "narrative": {
+        "prologueText": "前方是 2008 年的奇点。警告：视界内的信息无法向外传递。",
+        "bodyText": "那天火车开动的时候，我没有回头。不是因为决绝，而是因为我知道，一旦回头，那个站在月台上的我就永远被困在光子球层里，围着那一刻旋转，直到热寂。",
+        "epilogueText": "光在此处环绕了十七圈才坠入黑暗，就像那句话说出口前，我咽下去的十七次犹豫。",
+        "quote": "越接近那个时刻，时间越粘稠。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "eventHorizon": {
+          "schwarzschildRadius": 180,
+          "spin": 0.9,
+          "accretionRate": 0.4,
+          "lensingStrength": 1.5,
+          "timeDilationFactor": 5.0,
+          "photonSphereRadius": 270
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "scroll",
+        "exitBehavior": "noEscape",
+        "ambientParticles": 500,
+        "cameraStart": {
+          "position": [0, 0, 800],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_2019_fracture",
+      "meta": {
+        "title": "碎裂与重组",
+        "date": "2019-04-10",
+        "chapterIndex": 3,
+        "order": 1,
+        "tags": ["亲密关系", "撕裂", "重组"],
+        "emotionalTemperature": 4500,
+        "isHidden": false
+      },
+      "celestialType": "rocheLimit",
+      "narrative": {
+        "prologueText": "每段关系都是一次轨道逼近。问题是：你会成为双星系统，还是成为环？",
+        "bodyText": "靠近到一定程度，潮汐力就会把一切撕碎。月球不敢太靠近地球，人也不敢太靠近真相。洛希极限是宇宙给亲密关系划定的安全距离。但这不是毁灭，这是重组。你变成了环，用一万块碎片继续环绕。",
+        "epilogueText": "你们锁定了。从此以后，你们只有一面朝向彼此——那是你们的暗面，永远不会被看见。",
+        "quote": "碎裂不是毁灭——是重组成环。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "rocheLimit": {
+          "primaryMass": 100,
+          "secondaryMass": 30,
+          "secondaryDensity": 1.0,
+          "tidalLockingDistance": 200,
+          "debrisCount": 1000,
+          "accretionTemperature": 4500
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "drag",
+        "exitBehavior": "collapse",
+        "ambientParticles": 400,
+        "cameraStart": {
+          "position": [0, 0, 600],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    },
+    {
+      "id": "mem_2015_resonance",
+      "meta": {
+        "title": "周期性发作的执念",
+        "date": "2015-03-20",
+        "chapterIndex": 4,
+        "order": 1,
+        "tags": ["执念", "循环", "共鸣"],
+        "emotionalTemperature": 9000,
+        "isHidden": false
+      },
+      "celestialType": "gravitationalWave",
+      "narrative": {
+        "prologueText": "两个质量体在时空中共舞。它们并未触碰彼此，却已使整个宇宙变形。",
+        "bodyText": "我们总是周期性地靠近，再周期性地远离。每一次旋近都辐射出巨大的能量——那些深夜的电话、无声的争吵、和解时过度的温柔。直到最后那一次并合，我们终于把彼此变成了时空的涟漪。",
+        "epilogueText": "这是你留下的度规扰动。h ≈ 10^-21，刚好足以改变我的一生。",
+        "quote": "并合结束了，但时空的涟漪仍在传播。"
+      },
+      "media": {
+        "primaryImage": null,
+        "secondaryImages": [],
+        "ambientAudio": null,
+        "spatialAudio": null,
+        "videoLoop": null
+      },
+      "physicsParams": {
+        "gravitationalWave": {
+          "primaryMass": 40,
+          "secondaryMass": 35,
+          "orbitalDecayRate": 0.025,
+          "waveAmplitude": 2.0,
+          "ringdownFrequency": 280,
+          "massEnergyRatio": 0.047,
+          "initialOrbitRadius": 250
+        }
+      },
+      "interactionConfig": {
+        "entryTrigger": "drag",
+        "exitBehavior": "collapse",
+        "ambientParticles": 400,
+        "cameraStart": {
+          "position": [0, 0, 500],
+          "lookAt": [0, 0, 0]
+        }
+      }
+    }
+  ]
+}

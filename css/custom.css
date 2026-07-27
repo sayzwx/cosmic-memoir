@@ -1,0 +1,91 @@
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #000011;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(100, 150, 255, 0.2);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 150, 255, 0.4);
+}
+
+::-webkit-scrollbar-corner {
+    background: #000011;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 150, 255, 0.2) #000011;
+}
+
+::selection {
+    background: rgba(100, 180, 255, 0.3);
+    color: #e0e8ff;
+}
+
+::-moz-selection {
+    background: rgba(100, 180, 255, 0.3);
+    color: #e0e8ff;
+}
+
+* {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, opacity 0.3s ease;
+}
+
+@keyframes warpPulse {
+    0%, 100% {
+        box-shadow: 0 0 60px rgba(50, 100, 200, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 80px rgba(100, 180, 255, 0.25);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        opacity: 0.4;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #c8d4f0;
+    -webkit-box-shadow: 0 0 0 1000px rgba(0, 5, 20, 0.6) inset;
+    transition: background-color 5000s ease-in-out 0s;
+}
