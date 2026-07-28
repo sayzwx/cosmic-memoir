@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CosmicMemoir - 奇点验证</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.cn">
+  <link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin>
+  <link href="https://fonts.googleapis.cn/css2?family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -26,7 +26,19 @@
     (function () {
       var TOKEN_KEY = 'cm_token';
       var LOGIN_TIME_KEY = 'cm_loginTime';
+      var FAILED_KEY = 'cm_failedAttempts';
+      var LOCK_KEY = 'cm_lockUntil';
       var SESSION_TIMEOUT = 3600000;
+
+      // Support ?logout to clear session and return to login
+      if (window.location.search.indexOf('logout') !== -1) {
+        sessionStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(LOGIN_TIME_KEY);
+        localStorage.removeItem(FAILED_KEY);
+        localStorage.removeItem(LOCK_KEY);
+        window.location.replace(window.location.pathname);
+        return;
+      }
 
       var token = sessionStorage.getItem(TOKEN_KEY);
       var loginTime = sessionStorage.getItem(LOGIN_TIME_KEY);
@@ -39,8 +51,8 @@
       }
     })();
   </script>
-  <script type="module" crossorigin src="./assets/index-BB5oqDFc.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-BbS9sOS1.css">
+  <script type="module" crossorigin src="./assets/index-DfydS8IK.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DoyFzXex.css">
 </head>
 <body>
   <div id="root"></div>
