@@ -2,8 +2,8 @@
 
 > **项目仓库**: https://github.com/sayzwx/cosmic-memoir  
 > **线上地址**: https://sayzwx.github.io/cosmic-memoir/  
-> **文档日期**: 2026-07-27  
-> **技术栈**: 原生 HTML/CSS/JS + Three.js r160+ + Tailwind CSS + Vitest  
+> **文档日期**: 2026-07-28  
+> **技术栈**: React 18 + Vite + Three.js r170+ + React Three Fiber + 原生 JS + Tailwind CSS + Vitest  
 
 ---
 
@@ -35,15 +35,41 @@ CosmicMemoir 是一个基于天体物理隐喻的交互式回忆录网站。用�
 
 ```
 cosmic-memoir/
-├── index.html                    # 入口页（检测 token 跳转 login 或 universe）
-├── login.html                    # 登录页（虫洞穿梭主题）
+├── index.html                    # Vite 入口页（React 登录应用，检测 token 跳转）
+├── login.html                    # 旧登录页重定向到 index.html（兼容 auth-guard）
 ├── universe.html                 # 主宇宙页（全屏 Canvas + UI 叠加层）
+├── vite.config.js                # Vite 构建配置
+│
+├── src/                          # React 登录应用源码
+│   ├── main.jsx                  # React 入口
+│   ├── App.jsx                   # 主应用组件
+│   ├── components/
+│   │   ├── Scene.jsx             # R3F Canvas + 场景组合
+│   │   ├── CameraRig.jsx         # 相机控制器（轨道漂移 + 拖拽/滚轮 + 视差）
+│   │   ├── GalaxyParticles.jsx   # 螺旋星系粒子系统（50k GPU instanced）
+│   │   ├── BlackHole.jsx         # 事件视界 + 光子环
+│   │   ├── AccretionDisk.jsx     # 吸积盘着色器（湍流 + 多普勒）
+│   │   ├── PhotonSystem.jsx      # 密码输入光子发射系统
+│   │   ├── Effects.jsx           # 后处理（Bloom / DoF / 色差 / 颗粒 / 暗角）
+│   │   └── LoginOverlay.jsx      # 玻璃拟态登录卡片 UI
+│   ├── shaders/
+│   │   ├── common.js             # 公共 GLSL（噪声 + 黑体色温）
+│   │   ├── galaxy.js             # 星系粒子着色器
+│   │   ├── accretionDisk.js      # 吸积盘着色器
+│   │   └── photon.js             # 光子着色器
+│   ├── hooks/
+│   │   ├── useAuth.js            # SHA-256 认证逻辑
+│   │   └── useResponsive.js      # 响应式 + 陀螺仪
+│   ├── store/
+│   │   └── sharedState.js        # 3D 场景与 UI 共享可变状态
+│   └── styles/
+│       └── login.css             # 登录页样式（玻璃拟态）
 │
 ├── css/
 │   └── custom.css                # 深空主题自定义样式
 │
 ├── js/
-│   ├── login.js                  # 登录逻辑 + 星场动画 + 虫洞穿梭动画
+│   ├── login.js                  # 旧登录逻辑（已弃用，保留参考）
 │   ├── auth-guard.js             # 路由守卫（IIFE，检查 token + 1h 超时）
 │   └── app.js                    # 主应用入口（实例化 CosmicMemoirApp）
 │
@@ -87,9 +113,12 @@ cosmic-memoir/
 │   ├── CODE_REVIEW.md            # 代码审查报告（1008 行）
 │   └── HANDOVER.md               # 本文件
 │
+├── .github/workflows/
+│   └── deploy.yml                # GitHub Actions 部署工作流
+│
 ├── .nojekyll                     # 禁用 Jekyll 处理
 ├── .gitignore                    # 忽略 node_modules 等
-├── package.json                  # 项目配置（vitest + jsdom）
+├── package.json                  # 项目配置（Vite + React + R3F + vitest）
 └── vitest.config.js              # Vitest 配置
 ```
 
@@ -99,22 +128,26 @@ cosmic-memoir/
 
 ### 3.1 本地运行
 
-项目使用 ES Module，**必须通过 HTTP 服务器访问**（不能直接用 `file://` 打开）。
+项目分为两部分：新的 React 登录页（Vite 开发服务器）和原宇宙页（静态文件）。
 
 ```bash
-# 方式一：Node.js
 cd cosmic-memoir
-npx serve .
+npm install        # 首次需要安装依赖
 
-# 方式二：Python
-cd cosmic-memoir
-python -m http.server 8000
+# 启动 Vite 开发服务器（React 登录页）
+npm run dev
+# 访问 http://localhost:5173
 
-# 方式三：VS Code Live Server 插件
-# 右键 index.html -> Open with Live Server
+# 构建生产版本
+npm run build
+# 输出到 dist/ 目录
+
+# 预览构建结果
+npm run preview
+# 访问 http://localhost:4173
 ```
 
-然后浏览器打开 `http://localhost:8000`（或 Live Server 分配的端口）。
+> 原宇宙页 `universe.html` 在开发模式下直接从根目录访问 `http://localhost:5173/universe.html`，构建后通过 `vite-plugin-static-copy` 复制到 `dist/`。
 
 ### 3.2 运行测试
 
@@ -127,10 +160,14 @@ npx vitest         # watch 模式
 
 ### 3.3 部署到 GitHub Pages
 
-代码已推送到 `https://github.com/sayzwx/cosmic-memoir`，GitHub Pages 已启用。
+项目现在需要构建步骤，因此使用 GitHub Actions 自动部署。工作流位于 `.github/workflows/deploy.yml`。
 
-**更新网站**（不需要自动同步，手动推送即可）：
+**首次配置**（仅一次）：
+1. GitHub 仓库 → Settings → Pages
+2. Source 选择 **GitHub Actions**（不是 "Deploy from a branch"）
+3. 保存
 
+**更新网站**：
 ```bash
 cd cosmic-memoir
 git add -A
@@ -138,7 +175,13 @@ git commit -m "update: 你的修改说明"
 git push
 ```
 
-推送后 GitHub Pages 会在 1-2 分钟内自动重新构建部署。
+推送后 GitHub Actions 会自动构建并部署（约 1-3 分钟）。
+
+**本地构建验证**：
+```bash
+npm run build    # 构建到 dist/
+npm run preview  # 本地预览构建结果
+```
 
 ---
 
@@ -208,6 +251,43 @@ index.html → 检测 sessionStorage cm_token
 | 统一输入 | 所有输入通过 `InputAdapter` 转发，渲染器不直接监听 DOM |
 | 物理参数驱动 | 所有动画参数从 `data.physicsParams` 读取，禁止硬编码 |
 | 资源管理 | `destroy()` 方法正确释放 Geometry/Material/Texture/事件 |
+
+### 4.4 React 登录页架构（新增）
+
+新的登录页使用 React + React Three Fiber 构建，位于 `src/` 目录。
+
+```
+┌──────────────────────────────────────────────┐
+│  UI 层 (React + CSS)                          │
+│  LoginOverlay.jsx（玻璃拟态卡片 + 输入交互）   │
+├──────────────────────────────────────────────┤
+│  共享状态层                                    │
+│  sharedState.js（可变对象，UI↔3D 桥接）       │
+├──────────────────────────────────────────────┤
+│  3D 场景层 (R3F Canvas)                       │
+│  Scene.jsx                                    │
+│    ├─ CameraRig.jsx（轨道漂移 + 拖拽 + 视差） │
+│    ├─ GalaxyParticles.jsx（50k instanced 星系）│
+│    ├─ BlackHole.jsx（事件视界 + 光子环）      │
+│    ├─ AccretionDisk.jsx（湍流 + 多普勒着色器）│
+│    ├─ PhotonSystem.jsx（密码光子发射）        │
+│    └─ Effects.jsx（Bloom / DoF / 色差 / 颗粒）│
+├──────────────────────────────────────────────┤
+│  认证层                                       │
+│  useAuth.js（SHA-256 校验 + sessionStorage）  │
+└──────────────────────────────────────────────┘
+```
+
+**关键设计**：
+
+| 设计 | 实现 |
+|------|------|
+| UI 与 3D 通信 | `sharedState.js` 可变对象，事件处理器直接写入，`useFrame` 每帧读取 |
+| 登录卡片 3D 透视 | CSS `perspective + rotateY/X`，由 CameraRig 直接操作 DOM transform |
+| 引力波脉冲 | `sharedState.pulseRadius/Strength` 写入 → 星系顶点着色器扩散环形扰动 |
+| 光子发射 | `sharedState.photons` 队列 → PhotonSystem 池化管理（60 粒子上限） |
+| 验证动画 | FOV 75→120 + 色差增强 + 粒子坍缩 + Bloom 增强，2.6s 后跳转 universe.html |
+| 移动端降级 | 粒子数 50k→15k，DPR 锁定 1，陀螺仪替代鼠标视差 |
 
 ---
 
@@ -530,7 +610,8 @@ npx vitest run --reporter verbose  # 详细输出
 |------|-----|
 | 仓库 | https://github.com/sayzwx/cosmic-memoir |
 | 分支 | main |
-| 部署目录 | / (根目录) |
+| 部署方式 | GitHub Actions 构建 `dist/` 并部署 |
+| 工作流 | `.github/workflows/deploy.yml` |
 | 访问地址 | https://sayzwx.github.io/cosmic-memoir/ |
 | .nojekyll | 已添加（禁用 Jekyll） |
 | 费用 | 免费 |
@@ -544,7 +625,9 @@ git commit -m "update: 修改说明"
 git push
 ```
 
-推送后 1-2 分钟自动重新部署。
+推送后 GitHub Actions 自动构建并部署（约 1-3 分钟）。
+
+> 确保 GitHub Settings → Pages → Source 已设置为 **GitHub Actions**。
 
 ### 10.3 如需自定义域名（未来）
 
@@ -569,6 +652,7 @@ git push
 |------|------|--------|
 | 前端哈希认证 | JS 源码可见，哈希可被逆向 | 低（个人项目可接受） |
 | 隐藏记忆非真隐藏 | JSON 文件可直接访问 | 低 |
+| 新登录页未经真机测试 | 视觉/性能需在实际设备验证 | 高 |
 | 无音效系统 | 五大场景无环境音/交互音 | 中（P2 阶段） |
 | 无 Android 触摸适配 | InputAdapter 已预留接口但未启用 | 中（P2 阶段） |
 | 转场动画为 placeholder | 章间转场使用 setTimeout 而非 GSAP | 中（P1 阶段） |
@@ -596,9 +680,13 @@ git push
 | 我想要... | 编辑这个文件 |
 |---------|------------|
 | 添加/修改回忆内容 | `data/memories.json` |
-| 修改登录密码 | `js/login.js` 第 2-3 行 |
-| 修改登录页样式 | `login.html` 内联 `<style>` |
-| 修改登录页文案 | `login.html` 内 HTML / `js/login.js` 中 hint 文案 |
+| 修改登录密码 | `src/hooks/useAuth.js` → `CREDENTIALS.passwordHash` |
+| 修改登录页 UI / 交互 | `src/components/LoginOverlay.jsx` + `src/styles/login.css` |
+| 修改星系粒子效果 | `src/components/GalaxyParticles.jsx` + `src/shaders/galaxy.js` |
+| 修改黑洞 / 吸积盘 | `src/components/BlackHole.jsx` / `AccretionDisk.jsx` + `src/shaders/accretionDisk.js` |
+| 修改后处理效果 | `src/components/Effects.jsx` |
+| 修改相机行为 | `src/components/CameraRig.jsx` |
+| 修改登录验证动画 | `src/components/CameraRig.jsx`（过渡）+ `src/components/Effects.jsx`（色差/Bloom） |
 | 修改主宇宙页 UI | `universe.html` + `js/app.js` |
 | 修改某个场景的视觉效果 | `engine/renderers/XxxRenderer.js` |
 | 修改着色器 | `engine/shaders/*.frag` / `*.vert` / `*.glsl` |

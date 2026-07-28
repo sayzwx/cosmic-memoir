@@ -1,207 +1,27 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CosmicMemoir - 身份验证</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./css/custom.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #000011;
-            font-family: 'Noto Serif SC', serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        #starfield {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-
-        .login-portal {
-            position: relative;
-            z-index: 10;
-            background: rgba(0, 5, 20, 0.6);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(100, 180, 255, 0.15);
-            border-radius: 16px;
-            padding: 48px 40px;
-            width: 420px;
-            max-width: 90vw;
-            margin: auto;
-            top: 50%;
-            transform: translateY(-50%);
-            box-shadow: 0 0 60px rgba(50, 100, 200, 0.1);
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .login-portal.warping {
-            border-color: rgba(200, 220, 255, 0.8);
-            box-shadow: 0 0 120px rgba(100, 180, 255, 0.4);
-            transform: translateY(-50%) scale(0.95);
-        }
-
-        .login-portal.exiting {
-            opacity: 0;
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .login-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #e0e8ff;
-            text-align: center;
-            letter-spacing: 0.1em;
-            margin-bottom: 8px;
-        }
-
-        .login-subtitle {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            color: #6b7a9c;
-            text-align: center;
-            letter-spacing: 0.05em;
-            margin-bottom: 40px;
-        }
-
-        .input-field {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(100, 150, 255, 0.2);
-            border-radius: 8px;
-            padding: 14px 16px;
-            color: #c8d4f0;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            margin-bottom: 16px;
-            outline: none;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .input-field:focus {
-            border-color: rgba(100, 180, 255, 0.6);
-            box-shadow: 0 0 20px rgba(100, 180, 255, 0.15);
-        }
-
-        .input-field::placeholder {
-            color: rgba(107, 122, 156, 0.5);
-        }
-
-        #login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, rgba(30, 40, 70, 0.8), rgba(20, 30, 60, 0.8));
-            border: 1px solid rgba(100, 150, 255, 0.2);
-            border-radius: 8px;
-            color: #a0b4d8;
-            font-family: 'Noto Serif SC', serif;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: not-allowed;
-            transition: all 0.4s ease;
-            margin-top: 8px;
-        }
-
-        #login-btn.active {
-            cursor: pointer;
-            color: #e0e8ff;
-            background: linear-gradient(135deg, rgba(50, 80, 140, 0.9), rgba(40, 60, 120, 0.9));
-            border-color: rgba(100, 180, 255, 0.4);
-        }
-
-        #login-btn.active:hover {
-            box-shadow: 0 0 30px rgba(100, 180, 255, 0.25);
-            transform: translateY(-1px);
-        }
-
-        #login-hint {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            color: #4a5568;
-            text-align: center;
-            margin-top: 16px;
-            height: 16px;
-            transition: color 0.3s ease;
-        }
-
-        #login-hint.error {
-            color: #e57373;
-        }
-
-        #login-hint.success {
-            color: #81c784;
-        }
-
-        #wormhole-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 100;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        #wormhole-overlay.active {
-            opacity: 1;
-        }
-
-        @keyframes warpPulse {
-            0%, 100% {
-                box-shadow: 0 0 60px rgba(50, 100, 200, 0.1);
-            }
-            50% {
-                box-shadow: 0 0 100px rgba(100, 180, 255, 0.3);
-            }
-        }
-
-        .login-portal.warping {
-            animation: warpPulse 1s ease-in-out infinite;
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateY(-50%) translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateY(-50%) translateX(-8px); }
-            20%, 40%, 60%, 80% { transform: translateY(-50%) translateX(8px); }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CosmicMemoir - Redirecting</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #020205;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #4a90d9;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+  </style>
+  <script>
+    window.location.replace('./index.html');
+  </script>
 </head>
 <body>
-    <canvas id="starfield"></canvas>
-
-    <div class="login-portal" id="loginPortal">
-        <h1 class="login-title">奇点验证</h1>
-        <p class="login-subtitle">AUTHENTICATION REQUIRED</p>
-        <input type="text" id="username" class="input-field" placeholder="观测者 ID" autocomplete="off">
-        <input type="password" id="password" class="input-field" placeholder="引力密钥" autocomplete="off">
-        <button id="login-btn" disabled>事件视界尚未形成</button>
-        <p id="login-hint">输入凭证以坍缩波函数</p>
-    </div>
-
-    <canvas id="wormhole-overlay"></canvas>
-
-    <script type="module" src="./js/login.js"></script>
+  <p>Redirecting to singularity verification...</p>
 </body>
 </html>
