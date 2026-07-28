@@ -18,7 +18,8 @@ export function AccretionDisk() {
       uniforms: {
         uTime: { value: 0 },
         uTransitionProgress: { value: 0 },
-        uIsTransitioning: { value: 0 }
+        uIsTransitioning: { value: 0 },
+        uBreath: { value: 0 }
       },
       transparent: true,
       side: THREE.DoubleSide,
@@ -31,6 +32,8 @@ export function AccretionDisk() {
 
   useFrame((state) => {
     const t = state.clock.elapsedTime
+    const breathCycle = 4.0
+    const breath = Math.sin(t * (Math.PI * 2 / breathCycle)) * 0.5 + 0.5
 
     if (mainDiskRef.current) {
       mainDiskRef.current.rotation.z = t * 0.04
@@ -39,6 +42,7 @@ export function AccretionDisk() {
         sharedState.transitionProgress
       mainDiskRef.current.material.uniforms.uIsTransitioning.value =
         sharedState.isTransitioning ? 1 : 0
+      mainDiskRef.current.material.uniforms.uBreath.value = breath
     }
 
     if (lensedDiskRef.current) {
@@ -48,18 +52,17 @@ export function AccretionDisk() {
         sharedState.transitionProgress
       lensedDiskRef.current.material.uniforms.uIsTransitioning.value =
         sharedState.isTransitioning ? 1 : 0
+      lensedDiskRef.current.material.uniforms.uBreath.value = breath
     }
   })
 
   return (
     <group>
-      {/* Main accretion disk - slightly tilted */}
       <mesh ref={mainDiskRef} rotation={[-Math.PI / 2 + 0.14, 0, 0]}>
         <ringGeometry args={[3.5, 18.0, 320, 8]} />
         <primitive object={mainMaterial} attach="material" />
       </mesh>
 
-      {/* Lensed "halo" disk - vertical arc simulating gravitational lensing */}
       <mesh ref={lensedDiskRef} rotation={[0.14, 0, 0]}>
         <ringGeometry args={[3.7, 16.0, 320, 8]} />
         <primitive object={lensedMaterial} attach="material" />

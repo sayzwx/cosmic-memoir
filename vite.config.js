@@ -9,6 +9,7 @@ export default defineConfig({
       targets: [
         { src: 'universe.html', dest: '' },
         { src: 'login.html', dest: '' },
+        { src: 'config.json', dest: '' },
         { src: 'js/**/*', dest: 'js' },
         { src: 'css/**/*', dest: 'css' },
         { src: 'engine/**/*', dest: 'engine' },

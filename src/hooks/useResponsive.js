@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { sharedState } from '../store/sharedState'
+import config from '../config.json'
 
 export function useResponsive() {
   const [isMobile, setIsMobile] = useState(
@@ -7,14 +8,16 @@ export function useResponsive() {
       (window.innerWidth < 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent))
   )
 
-  const [particleCount, setParticleCount] = useState(isMobile ? 15000 : 50000)
+  const [particleCount, setParticleCount] = useState(
+    isMobile ? config.scene.mobileParticleCount : config.scene.particleCount
+  )
 
   useEffect(() => {
     const check = () => {
       const mobile =
         window.innerWidth < 768 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
       setIsMobile(mobile)
-      setParticleCount(mobile ? 15000 : 50000)
+      setParticleCount(mobile ? config.scene.mobileParticleCount : config.scene.particleCount)
     }
 
     check()
@@ -22,7 +25,6 @@ export function useResponsive() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Gyroscope support on mobile devices
   useEffect(() => {
     if (!isMobile) return
 

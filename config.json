@@ -1,0 +1,29 @@
+{
+  "slogan": {
+    "title": "We are all made of starstuff.",
+    "subtitle": "Collecting the scattered memories of a lifetime."
+  },
+  "login": {
+    "identityPlaceholder": "Identity",
+    "keyPlaceholder": "Key",
+    "hint": {
+      "idle": "The universe is quiet. Speak to awaken it.",
+      "typing": "Energy flows inward...",
+      "ready": "Resonance achieved. The singularity awaits.",
+      "verifying": "Verifying spacetime coordinates...",
+      "success": "Verification passed. Generating Einstein-Rosen bridge...",
+      "error": "Gravitational parameters mismatch.",
+      "locked": "Spacetime locked. Await {}s."
+    },
+    "button": {
+      "idle": "Awaiting signal",
+      "ready": "Reconnect to Memory",
+      "transitioning": "Traversing..."
+    }
+  },
+  "scene": {
+    "particleCount": 30000,
+    "mobileParticleCount": 12000,
+    "breathCycleSeconds": 4
+  }
+}

@@ -1,240 +1,257 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import * as THREE from 'three'
 import { useAuth } from '../hooks/useAuth'
 import { sharedState } from '../store/sharedState'
+import config from '../config.json'
 
-export function LoginOverlay({ cardRef }) {
+const AGGREGATION_PARTICLES = Array.from({ length: 56 }, (_, index) => {
+  const angle = (index / 56) * Math.PI * 2 + (index % 5) * 0.19
+  const radius = 180 + (index % 9) * 24
+  return {
+    id: index,
+    x: Math.cos(angle) * radius,
+    y: Math.sin(angle) * radius * 0.62,
+    delay: (index % 14) * 0.045,
+    size: 1 + (index % 4) * 0.65,
+    warm: index % 5 === 0
+  }
+})
+
+export function LoginOverlay({ cardRef, isAwakened, onAwaken }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [hint, setHint] = useState('校准引力波频率以穿越奇点')
+  const [hint, setHint] = useState(config.login.hint.idle)
   const [hintClass, setHintClass] = useState('')
   const [isValid, setIsValid] = useState(false)
   const [isLocked, setIsLocked] = useState(false)
   const [lockRemaining, setLockRemaining] = useState(0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [floatingChars, setFloatingChars] = useState([])
+  const [activeField, setActiveField] = useState(null)
 
   const { authenticate, checkLock } = useAuth()
   const lockTimerRef = useRef(null)
-  const cardInnerRef = useRef(null)
+  const identityInputRef = useRef(null)
+  const keyInputRef = useRef(null)
+  const charIdCounter = useRef(0)
 
-  // Initial lock state
   useEffect(() => {
     const lock = checkLock()
     if (lock.locked) {
       setIsLocked(true)
       setLockRemaining(lock.remaining)
-      setHint(`时空已锁定，请等待 ${lock.remaining}s`)
+      setHint(config.login.hint.locked.replace('{}', lock.remaining))
       setHintClass('error')
     }
   }, [checkLock])
 
-  // Lock countdown
+  useEffect(() => {
+    if (!isAwakened || isLocked) return undefined
+    const focusTimer = setTimeout(() => identityInputRef.current?.focus(), 1150)
+    return () => clearTimeout(focusTimer)
+  }, [isAwakened, isLocked])
+
   useEffect(() => {
     if (!isLocked) return
-
     lockTimerRef.current = setInterval(() => {
       const lock = checkLock()
       if (lock.locked) {
         setLockRemaining(lock.remaining)
-        setHint(`时空已锁定，请等待 ${lock.remaining}s`)
+        setHint(config.login.hint.locked.replace('{}', lock.remaining))
       } else {
         setIsLocked(false)
-        setHint('校准引力波频率以穿越奇点')
+        setHint(config.login.hint.idle)
         setHintClass('')
         clearInterval(lockTimerRef.current)
       }
     }, 1000)
-
     return () => clearInterval(lockTimerRef.current)
   }, [isLocked, checkLock])
 
-  // Validate whenever inputs change
+  const updateInputEnergy = useCallback((u, p) => {
+    const energy = Math.min(1, (u.length / 4 + p.length / 4) * 0.5)
+    sharedState.inputEnergy = energy
+  }, [])
+
   useEffect(() => {
-    const valid =
-      username.trim().length > 0 && password.trim().length > 0 && !isLocked
+    const valid = username.trim().length > 0 && password.trim().length > 0 && !isLocked
     setIsValid(valid)
     sharedState.isValid = valid
-
     if (valid) {
-      setHint('频率锁定就绪')
+      setHint(config.login.hint.ready)
       setHintClass('ready')
     } else if (!isLocked) {
-      setHint('校准引力波频率以穿越奇点')
+      setHint(username.length > 0 || password.length > 0 ? config.login.hint.typing : config.login.hint.idle)
       setHintClass('')
     }
   }, [username, password, isLocked])
 
-  // Project a DOM element's center into world space and store as the focus point
-  const projectElementToWorld = useCallback((el) => {
-    if (!el || !sharedState.camera) return
+  const handleIdentityChange = useCallback((e) => {
+    const newValue = e.target.value
+    if (newValue.length > username.length) {
+      const newChar = newValue.slice(-1)
+      const id = ++charIdCounter.current
+      setFloatingChars(prev => [...prev, { id, char: newChar, field: 'identity' }])
+      setTimeout(() => {
+        setFloatingChars(prev => prev.filter(c => c.id !== id))
+      }, 1400)
+    }
+    setUsername(newValue)
+    updateInputEnergy(newValue, password)
+  }, [username, password, updateInputEnergy])
 
-    const rect = el.getBoundingClientRect()
-    const cx = ((rect.left + rect.width / 2) / window.innerWidth) * 2 - 1
-    const cy = -(((rect.top + rect.height / 2) / window.innerHeight) * 2 - 1)
+  const handleKeyChange = useCallback((e) => {
+    const newValue = e.target.value
+    setPassword(newValue)
+    updateInputEnergy(username, newValue)
+  }, [username, updateInputEnergy])
 
-    const vector = new THREE.Vector3(cx, cy, 0.5)
-    vector.unproject(sharedState.camera)
+  const handleIdentityFocus = useCallback(() => {
+    onAwaken()
+    setActiveField('identity')
+  }, [onAwaken])
 
-    const dir = vector.sub(sharedState.camera.position).normalize()
-    const distance = 40
-    const point = sharedState.camera.position.clone().add(dir.multiplyScalar(distance))
-
-    sharedState.focusPoint.copy(point)
-    sharedState.focusStrength = 1.0
-  }, [])
-
-  const triggerPulse = useCallback((element) => {
-    sharedState.pulseRadius = 0
-    sharedState.pulseStrength = 1.0
-    sharedState.pulseOrigin.set(0, 0, 0)
-    projectElementToWorld(element)
-  }, [projectElementToWorld])
-
-  const handleFocus = useCallback((e) => {
-    triggerPulse(e.target)
-  }, [triggerPulse])
+  const handleKeyFocus = useCallback(() => {
+    onAwaken()
+    setActiveField('key')
+  }, [onAwaken])
 
   const handleBlur = useCallback(() => {
+    setActiveField(null)
     sharedState.focusStrength = 0
-  }, [])
-
-  const handlePasswordKeyDown = useCallback(() => {
-    // Emit a photon on each keystroke
-    const photon = {
-      active: true,
-      pos: new THREE.Vector3(
-        (Math.random() - 0.5) * 4,
-        (Math.random() - 0.5) * 2 + 5,
-        (Math.random() - 0.5) * 4
-      ),
-      angle: Math.random() * Math.PI * 2,
-      radius: 18 + Math.random() * 8,
-      speed: 0.6 + Math.random() * 0.6,
-      color: new THREE.Color(0, 0.94, 1.0)
-    }
-
-    sharedState.photons.push(photon)
-    if (sharedState.photons.length > sharedState.maxPhotons) {
-      sharedState.photons.shift()
-    }
   }, [])
 
   const handleSubmit = useCallback(async () => {
     if (!isValid || isLocked || isTransitioning) return
 
-    setHint('正在校验时空坐标...')
+    setHint(config.login.hint.verifying)
     setHintClass('')
 
-    await new Promise((r) => setTimeout(r, 450))
-
+    await new Promise(r => setTimeout(r, 450))
     const result = await authenticate(username.trim(), password.trim())
 
     if (result.success) {
-      setHint('验证通过。正在生成爱因斯坦-罗森桥...')
+      setHint(config.login.hint.success)
       setHintClass('success')
       setIsTransitioning(true)
-
       sharedState.isTransitioning = true
       sharedState.transitionProgress = 0
-
       setTimeout(() => {
         window.location.href = './universe.html'
-      }, 2600)
+      }, 4500)
     } else {
-      setHint(`引力参数不匹配。还剩 ${result.remaining} 次尝试。`)
+      setHint(`${config.login.hint.error} ${result.remaining} attempts remaining.`)
       setHintClass('error')
-
-      // Shake the inner card (outer card transform is driven by CameraRig)
-      if (cardInnerRef.current) {
-        cardInnerRef.current.classList.remove('shake')
-        void cardInnerRef.current.offsetWidth
-        cardInnerRef.current.classList.add('shake')
-        setTimeout(() => {
-          if (cardInnerRef.current) cardInnerRef.current.classList.remove('shake')
-        }, 450)
-      }
-
       setPassword('')
-
+      updateInputEnergy(username, '')
       if (result.locked) {
         setIsLocked(true)
         setLockRemaining(result.remaining)
-        setHint(`时空已锁定，请等待 ${result.remaining}s`)
+        setHint(config.login.hint.locked.replace('{}', result.remaining))
       }
     }
-  }, [
-    username,
-    password,
-    isValid,
-    isLocked,
-    isTransitioning,
-    authenticate
-  ])
+  }, [username, password, isValid, isLocked, isTransitioning, authenticate, updateInputEnergy])
+
+  const passwordDots = Array.from({ length: Math.min(password.length, 12) })
 
   return (
     <div className="login-overlay">
-      <div className="login-card" ref={cardRef}>
-        <div className="login-card-inner" ref={cardInnerRef}>
-          <div className="login-header">
-            <h1 className="login-title">奇点验证</h1>
-            <p className="login-subtitle">Singularity Verification</p>
-          </div>
+      <div className="slogan-section">
+        <div className="slogan-kicker">COSMIC MEMOIR / OBSERVATION LOG</div>
+        <h1 className="slogan-title">{config.slogan.title}</h1>
+        <p className="slogan-subtitle">{config.slogan.subtitle}</p>
+      </div>
+      {isAwakened && !isTransitioning && <form
+        className="login-card awakened"
+        ref={cardRef}
+        onSubmit={(event) => {
+          event.preventDefault()
+          void handleSubmit()
+        }}
+      >
+        <div className="aggregation-field" aria-hidden="true">
+          {AGGREGATION_PARTICLES.map((particle) => (
+            <i
+              key={particle.id}
+              className={`aggregation-particle ${particle.warm ? 'warm' : ''}`}
+              style={{
+                '--from-x': `${particle.x}px`,
+                '--from-y': `${particle.y}px`,
+                '--delay': `${particle.delay}s`,
+                '--particle-size': `${particle.size}px`
+              }}
+            />
+          ))}
+        </div>
 
-          <div className="input-group">
+        <div className="galaxy-form-body" aria-label="Memory input constellation">
+          <div className="galaxy-axis" />
+          <label className={`galaxy-field ${activeField === 'identity' ? 'active' : ''}`}>
+            <span className="field-star blue" />
+            <span className="field-label">{config.login.identityPlaceholder}</span>
             <input
+              ref={identityInputRef}
               type="text"
-              className="input-field"
-              placeholder="观测者 ID"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              onFocus={handleFocus}
+              onChange={handleIdentityChange}
+              onFocus={handleIdentityFocus}
               onBlur={handleBlur}
-              autoComplete="off"
+              autoComplete="username"
               spellCheck={false}
               disabled={isLocked || isTransitioning}
             />
-            <div className="input-glow" />
-          </div>
+            <span className="field-dust" />
+            <div className="floating-chars-container">
+              {floatingChars.filter(c => c.field === 'identity').map(c => (
+                <span key={c.id} className={`floating-char ${c.field}-char`}>{c.char}</span>
+              ))}
+            </div>
+          </label>
 
-          <div className="input-group">
+          <label className={`galaxy-field ${activeField === 'key' ? 'active' : ''}`}>
+            <span className="field-star gold" />
+            <span className="field-label">{config.login.keyPlaceholder}</span>
             <input
+              ref={keyInputRef}
               type="password"
-              className="input-field"
-              placeholder="引力密钥"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handlePasswordKeyDown}
-              onFocus={handleFocus}
+              onChange={handleKeyChange}
+              onFocus={handleKeyFocus}
               onBlur={handleBlur}
-              autoComplete="off"
+              autoComplete="current-password"
               spellCheck={false}
               disabled={isLocked || isTransitioning}
             />
-            <div className="input-glow" />
-          </div>
+            <span className="field-dust warm" />
+            <div className="golden-dots-container" aria-hidden="true">
+              {passwordDots.map((_, i) => (
+                <span key={i} className="golden-dot" style={{ '--orbit': `${i * 30}deg`, animationDelay: `${i * 0.12}s` }} />
+              ))}
+            </div>
+          </label>
 
-          <button
-            className={`login-btn ${isValid ? 'active' : ''} ${
-              isLocked ? 'locked' : ''
-            } ${isTransitioning ? 'warping' : ''}`}
-            onClick={handleSubmit}
-            disabled={!isValid || isLocked || isTransitioning}
-          >
-            <span className="btn-text">
-              {isLocked
-                ? `时空锁定 ${lockRemaining}s`
-                : isTransitioning
-                ? '穿越中...'
-                : isValid
-                ? '穿越事件视界'
-                : '事件视界尚未形成'}
-            </span>
-            <span className="btn-pulse" />
-          </button>
+          <div className="submit-zone">
+            <button
+              type="submit"
+              className={`submit-btn ${isValid && !isLocked ? 'visible' : ''} ${
+                isTransitioning ? 'warping' : ''
+              } ${isLocked ? 'locked' : ''}`}
+              disabled={!isValid || isLocked || isTransitioning}
+            >
+              <span className="btn-text">
+                {isLocked
+                  ? `Locked ${lockRemaining}s`
+                  : isTransitioning
+                  ? config.login.button.transitioning
+                  : isValid
+                  ? config.login.button.ready
+                  : config.login.button.idle}
+              </span>
+            </button>
+          </div>
 
           <p className={`login-hint ${hintClass}`}>{hint}</p>
         </div>
-      </div>
+      </form>}
     </div>
   )
 }

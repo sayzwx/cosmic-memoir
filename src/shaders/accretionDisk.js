@@ -13,6 +13,7 @@ export const accretionDiskFragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uTransitionProgress;
   uniform float uIsTransitioning;
+  uniform float uBreath;
 
   varying vec3 vLocalPos;
 
@@ -40,15 +41,15 @@ export const accretionDiskFragmentShader = /* glsl */ `
     float turb2 = fbm21(noiseUV * 2.4 + vec2(uTime * 0.45, uTime * 0.12));
     float turb3 = fbm21(noiseUV * 5.5 + vec2(uTime * 0.7, 0.0));
 
-    // Temperature profile: 15000K inner -> 3500K outer, modulated by turbulence
-    float temp = mix(15000.0, 3500.0, smoothstep(0.0, 1.0, t));
-    temp *= (0.55 + turb1 * 0.75 + turb2 * 0.35);
+    // Temperature profile: 8000K inner -> 3000K outer, modulated by turbulence
+    float temp = mix(8000.0, 3000.0, smoothstep(0.0, 1.0, t));
+    temp *= (0.55 + turb1 * 0.65 + turb2 * 0.30);
 
     // Black body emission
     vec3 bbColor = blackbody(temp);
 
     // Cool tone palette: push toward cobalt blue / pulsar cyan, suppress orange
-    bbColor = mix(bbColor, bbColor * vec3(0.32, 0.62, 1.32), 0.48);
+    bbColor = mix(bbColor, bbColor * vec3(0.32, 0.62, 1.32), 0.35);
 
     // Subtle purple/cyan tint variation
     vec3 coolTint = mix(vec3(0.2, 0.45, 1.0), vec3(0.45, 0.28, 0.9), turb3);
@@ -72,24 +73,25 @@ export const accretionDiskFragmentShader = /* glsl */ `
     float spiral = sin(rotatedAngle * 2.0 + radius * 0.55) * 0.5 + 0.5;
     density *= (0.45 + spiral * 0.55);
 
-    // Inner edge boost (gravitational blueshift / brighter)
-    float innerBoost = smoothstep(0.2, 0.0, t) * 2.5;
-    density += innerBoost * turb1;
+    // Inner edge boost - subtle, not blown out
+    float innerBoost = smoothstep(0.2, 0.0, t) * 0.8;
+    density += innerBoost * turb1 * 0.5;
 
-    float brightness = density * 5.0;
+    float brightness = density * 2.0;
 
     // Vertical thickness falloff (raymarched disk volume look)
     float verticalFade = 1.0; // ring geometry is already a flat annulus
 
-    vec3 color = bbColor * brightness * verticalFade;
+    vec3 color = bbColor * brightness * verticalFade * (0.75 + uBreath * 0.35);
 
     if (uIsTransitioning > 0.5) {
-      color *= (1.0 - uTransitionProgress);
+      float approach = smoothstep(0.2, 0.68, uTransitionProgress);
+      color *= 1.0 + approach * 2.2;
     }
 
     float alpha = density * 0.92 * verticalFade;
     if (uIsTransitioning > 0.5) {
-      alpha *= (1.0 - uTransitionProgress);
+      alpha *= 1.0 - smoothstep(0.68, 0.84, uTransitionProgress);
     }
 
     gl_FragColor = vec4(color, alpha);

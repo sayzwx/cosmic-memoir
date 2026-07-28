@@ -30,5 +30,19 @@ export const sharedState = {
   maxPhotons: 60,
 
   // Live camera reference (set by CameraRig) for screen-to-world projection
-  camera: null
+  camera: null,
+
+  // --- New: particle fluidization ---
+  // Mouse position projected to 3D world space
+  mouseWorld: new THREE.Vector3(0, 0, 0),
+  // Mouse push strength (decays when mouse stops moving)
+  mousePushStrength: 0,
+
+  // --- New: input energy (drives halo color) ---
+  // 0 = no input, 1 = fully typed (both fields filled)
+  inputEnergy: 0,
+
+  // --- New: character emission (star dust aggregation) ---
+  // Each keystroke emits a particle burst toward the black hole
+  characterBursts: []
 }

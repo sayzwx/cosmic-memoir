@@ -3,7 +3,15 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { sharedState } from '../store/sharedState'
 
-const easeOutExpo = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t))
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+
+const _raycaster = new THREE.Raycaster()
+const _plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0)
+const _mouseNDC = new THREE.Vector2()
+const _intersect = new THREE.Vector3()
+const _transitionStart = new THREE.Vector3()
+const _transitionDirection = new THREE.Vector3()
+const _transitionTarget = new THREE.Vector3()
 
 export function CameraRig({ loginCardRef }) {
   const { camera, gl } = useThree()
@@ -18,6 +26,9 @@ export function CameraRig({ loginCardRef }) {
   const mousePos = useRef({ x: 0, y: 0 })
   const isDragging = useRef(false)
   const lastPointer = useRef({ x: 0, y: 0 })
+  const warpRoll = useRef(0)
+  const lastMouseTime = useRef(0)
+  const transitionStarted = useRef(false)
 
   useEffect(() => {
     const canvas = gl.domElement
@@ -37,9 +48,25 @@ export function CameraRig({ loginCardRef }) {
       if (isDragging.current) {
         const dx = e.clientX - lastPointer.current.x
         const dy = e.clientY - lastPointer.current.y
-        velocity.current.theta -= dx * 0.004
-        velocity.current.phi -= dy * 0.004
+        velocity.current.theta -= dx * 0.0015
+        velocity.current.phi -= dy * 0.0015
         lastPointer.current = { x: e.clientX, y: e.clientY }
+      }
+
+      // Track mouse for particle fluidization
+      _mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1
+      _mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1
+      _raycaster.setFromCamera(_mouseNDC, camera)
+      _plane.normal.set(0, 1, 0)
+      _plane.constant = 0
+      if (_raycaster.ray.intersectPlane(_plane, _intersect)) {
+        sharedState.mouseWorld.copy(_intersect)
+        const now = performance.now()
+        const dt = now - lastMouseTime.current
+        if (dt < 100) {
+          sharedState.mousePushStrength = Math.min(1.0, sharedState.mousePushStrength + 0.15)
+        }
+        lastMouseTime.current = now
       }
     }
 
@@ -52,8 +79,8 @@ export function CameraRig({ loginCardRef }) {
 
     const onWheel = (e) => {
       e.preventDefault()
-      targetRadius.current += e.deltaY * 0.04
-      targetRadius.current = Math.max(18, Math.min(110, targetRadius.current))
+      targetRadius.current += e.deltaY * 0.025
+      targetRadius.current = Math.max(35, Math.min(78, targetRadius.current))
     }
 
     canvas.addEventListener('pointerdown', onPointerDown)
@@ -67,84 +94,87 @@ export function CameraRig({ loginCardRef }) {
       window.removeEventListener('pointerup', onPointerUp)
       canvas.removeEventListener('wheel', onWheel)
     }
-  }, [gl])
+  }, [gl, camera])
 
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05)
 
-    // Expose camera for UI-side projection
     sharedState.camera = camera
 
     if (sharedState.isTransitioning) {
-      // Wormhole transition
+      if (!transitionStarted.current) {
+        _transitionStart.copy(camera.position)
+        _transitionDirection.copy(_transitionStart).normalize().negate()
+        transitionStarted.current = true
+      }
+
       sharedState.transitionProgress = Math.min(
         1,
-        sharedState.transitionProgress + dt * 0.55
+        sharedState.transitionProgress + dt * 0.25
       )
-      const t = easeOutExpo(sharedState.transitionProgress)
+      const progress = sharedState.transitionProgress
+      const approach = easeInOutCubic(Math.min(1, progress / 0.58))
+      const crossing = Math.max(0, (progress - 0.58) / 0.42)
 
-      camera.fov = 75 + t * 45
+      // A narrower FOV reinforces forward motion as the horizon fills the frame.
+      camera.fov = 70 - Math.min(1, progress / 0.58) * 18 + crossing * 10
       camera.updateProjectionMatrix()
 
-      spherical.current.radius = 55 * (1 - t * 0.85)
-      spherical.current.theta += dt * 3.0 * t
-      spherical.current.phi += dt * 1.5 * t
+      const distance = _transitionStart.length() * (1 - approach) - crossing * 24
+      camera.position.copy(_transitionDirection).multiplyScalar(-distance)
+      _transitionTarget.copy(camera.position).add(_transitionDirection)
+      camera.lookAt(_transitionTarget)
+      // Complete two eased corkscrew rotations and return to a level frame at
+      // the exit flash so the destination does not inherit a tilted camera.
+      warpRoll.current = Math.PI * 4 * easeInOutCubic(progress)
     } else {
-      // Idle orbital drift toward center (very slow)
-      spherical.current.theta += dt * 0.02
-
-      // Apply drag velocity with spring-like damping
+      transitionStarted.current = false
+      spherical.current.theta += dt * 0.012
       spherical.current.theta += velocity.current.theta
       spherical.current.phi += velocity.current.phi
-      velocity.current.theta *= 0.94
-      velocity.current.phi *= 0.94
-
-      // Clamp vertical angle
-      spherical.current.phi = Math.max(
-        0.25,
-        Math.min(Math.PI - 0.25, spherical.current.phi)
-      )
-
-      // Smooth zoom (ease-out expo feel)
-      spherical.current.radius +=
-        (targetRadius.current - spherical.current.radius) * 0.04
+      velocity.current.theta *= 0.91
+      velocity.current.phi *= 0.91
+      spherical.current.phi = Math.max(0.35, Math.min(Math.PI - 0.35, spherical.current.phi))
+      spherical.current.radius += (targetRadius.current - spherical.current.radius) * 0.035
+      warpRoll.current *= 0.9
     }
 
-    // Convert spherical to cartesian
-    const r = spherical.current.radius
     const theta = spherical.current.theta
     const phi = spherical.current.phi
 
-    camera.position.x = r * Math.sin(phi) * Math.cos(theta)
-    camera.position.y = r * Math.cos(phi)
-    camera.position.z = r * Math.sin(phi) * Math.sin(theta)
+    if (!sharedState.isTransitioning) {
+      const r = spherical.current.radius
+      camera.position.x = r * Math.sin(phi) * Math.cos(theta)
+      camera.position.y = r * Math.cos(phi)
+      camera.position.z = r * Math.sin(phi) * Math.sin(theta)
 
-    // Add subtle mouse parallax offset after lookAt
-    const parallaxX = sharedState.mouseParallax.x * 2.5
-    const parallaxY = sharedState.mouseParallax.y * 1.8
-    camera.position.x += parallaxX
-    camera.position.y += parallaxY
+      const parallaxX = sharedState.mouseParallax.x * 1.8
+      const parallaxY = sharedState.mouseParallax.y * 1.2
+      camera.position.x += parallaxX
+      camera.position.y += parallaxY
+      camera.lookAt(0, 0, 0)
+    }
 
-    camera.lookAt(0, 0, 0)
+    if (Math.abs(warpRoll.current) > 0.001) {
+      camera.rotateZ(warpRoll.current)
+    }
 
     sharedState.cameraRotation.x = camera.rotation.x
     sharedState.cameraRotation.y = camera.rotation.y
 
-    // Update login card 3D perspective via direct DOM ref (no setState)
     if (loginCardRef.current) {
-      const rotY = theta * 0.035
-      const rotX = -(phi - Math.PI / 2) * 0.08
+      const rotY = theta * 0.03
+      const rotX = -(phi - Math.PI / 2) * 0.06
       const scale = sharedState.isTransitioning
-        ? 1 - sharedState.transitionProgress * 0.3
+        ? 1 - sharedState.transitionProgress * 0.4
         : 1
       const opacity = sharedState.isTransitioning
-        ? 1 - sharedState.transitionProgress
+        ? Math.max(0, 1 - sharedState.transitionProgress * 1.2)
         : 1
-      loginCardRef.current.style.transform = `translate(-50%, -50%) perspective(1200px) rotateY(${rotY}rad) rotateX(${rotX}rad) scale(${scale})`
+      loginCardRef.current.style.transform = `translate(-50%, -50%) perspective(1400px) rotateY(${rotY}rad) rotateX(${rotX}rad) scale(${scale})`
       loginCardRef.current.style.opacity = opacity
     }
 
-    // Evolve gravitational wave pulse
     if (sharedState.pulseStrength > 0.005) {
       sharedState.pulseRadius += dt * 55
       sharedState.pulseStrength *= 0.94

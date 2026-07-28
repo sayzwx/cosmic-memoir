@@ -1,6 +1,6 @@
 /* --------------------------------------------------------------------------
-   CosmicMemoir "Singularity Verification" login styles
-   Deep-space palette: #020205 background, #4A90D9 cobalt, #00F0FF pulsar cyan
+   CosmicMemoir - Frameless "Stardust Aggregation" Login
+   No boxes. No borders. Just light, dust, and gravity.
    -------------------------------------------------------------------------- */
 
 * {
@@ -9,24 +9,25 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
   width: 100%;
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
-  background: #020205;
+  background: #020617;
   font-family: 'Noto Serif SC', serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
 }
 
 #root {
   width: 100%;
   height: 100%;
+  height: 100dvh;
 }
 
 /* --------------------------------------------------------------------------
-   Login overlay + glassmorphism card
+   Overlay container
    -------------------------------------------------------------------------- */
 .login-overlay {
   position: fixed;
@@ -36,313 +37,715 @@ body {
   justify-content: center;
   pointer-events: none;
   z-index: 10;
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.slogan-section {
+  position: fixed;
+  top: 9vh;
+  left: 7vw;
+  width: min(440px, 42vw);
+  text-align: left;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.slogan-kicker {
+  margin-bottom: 14px;
+  color: #8bb9ee;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 12px rgba(96, 165, 250, 0.45);
 }
 
 .login-card {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 420px;
-  max-width: 90vw;
-  padding: 48px 40px;
-  border-radius: 16px;
+  width: 430px;
+  height: 330px;
   pointer-events: auto;
-  background: rgba(2, 2, 8, 0.52);
-  backdrop-filter: blur(22px) saturate(1.25);
-  -webkit-backdrop-filter: blur(22px) saturate(1.25);
-  border: 1px solid rgba(74, 144, 217, 0.18);
-  box-shadow:
-    0 0 60px rgba(74, 144, 217, 0.07),
-    0 0 120px rgba(0, 240, 255, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transform-origin: center center;
   will-change: transform, opacity;
 }
 
-/* Holographic edge glow */
-.login-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 16px;
-  padding: 1px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 240, 255, 0.35) 0%,
-    rgba(74, 144, 217, 0.12) 30%,
-    rgba(74, 144, 217, 0.05) 70%,
-    rgba(0, 240, 255, 0.25) 100%
-  );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-  opacity: 0.7;
-  animation: edgeShimmer 6s ease-in-out infinite;
-}
-
-.login-card-inner {
-  position: relative;
-  z-index: 1;
-}
-
-@keyframes edgeShimmer {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   Typography
-   -------------------------------------------------------------------------- */
-.login-header {
-  text-align: center;
-  margin-bottom: 36px;
-}
-
-.login-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #c8d4f0;
-  letter-spacing: 0.14em;
-  margin-bottom: 8px;
-  text-shadow: 0 0 22px rgba(0, 240, 255, 0.18);
-}
-
-.login-subtitle {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  color: #4a6080;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-}
-
-/* --------------------------------------------------------------------------
-   Input fields
-   -------------------------------------------------------------------------- */
-.input-group {
-  position: relative;
-  margin-bottom: 16px;
-}
-
-.input-field {
-  width: 100%;
-  padding: 14px 16px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: #a8bcd8;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(74, 144, 217, 0.15);
-  border-radius: 8px;
-  outline: none;
-  transition:
-    border-color 0.4s ease,
-    box-shadow 0.4s ease,
-    background 0.4s ease;
-}
-
-.input-field::placeholder {
-  color: rgba(74, 96, 128, 0.5);
-}
-
-.input-field:focus {
-  border-color: rgba(0, 240, 255, 0.45);
-  background: rgba(0, 240, 255, 0.025);
-  box-shadow:
-    0 0 22px rgba(0, 240, 255, 0.1),
-    inset 0 0 24px rgba(0, 240, 255, 0.03);
-}
-
-.input-field:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.input-glow {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
-  transform: translateX(-50%);
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-}
-
-.input-field:focus + .input-glow {
-  width: 85%;
-}
-
-/* --------------------------------------------------------------------------
-   Login button - pulsar
-   -------------------------------------------------------------------------- */
-.login-btn {
-  position: relative;
-  width: 100%;
-  margin-top: 8px;
-  padding: 14px;
-  font-family: 'Noto Serif SC', serif;
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  color: #5a6a88;
-  background: rgba(8, 12, 24, 0.6);
-  border: 1px solid rgba(74, 144, 217, 0.12);
-  border-radius: 8px;
-  cursor: not-allowed;
-  overflow: hidden;
-  transition:
-    color 0.5s ease,
-    border-color 0.5s ease,
-    background 0.5s ease,
-    box-shadow 0.5s ease;
-}
-
-.login-btn.active {
-  color: #e0f0ff;
-  background: linear-gradient(
-    135deg,
-    rgba(74, 144, 217, 0.22),
-    rgba(0, 240, 255, 0.12)
-  );
-  border-color: rgba(0, 240, 255, 0.35);
-  cursor: pointer;
-  box-shadow: 0 0 24px rgba(0, 240, 255, 0.1);
-}
-
-.login-btn.active:hover {
-  box-shadow:
-    0 0 36px rgba(0, 240, 255, 0.22),
-    inset 0 0 20px rgba(0, 240, 255, 0.08);
-  transform: translateY(-1px);
-}
-
-.login-btn.active .btn-pulse {
-  opacity: 1;
-  animation: pulsarBeat 1.4s ease-in-out infinite;
-}
-
-.login-btn.locked {
-  color: #7a5a5a;
-  border-color: rgba(217, 74, 74, 0.2);
-  background: rgba(24, 8, 8, 0.5);
-}
-
-.login-btn.warping {
-  color: #ffffff;
-  border-color: rgba(0, 240, 255, 0.8);
-  background: linear-gradient(
-    135deg,
-    rgba(0, 240, 255, 0.3),
-    rgba(74, 144, 217, 0.2)
-  );
-  box-shadow: 0 0 48px rgba(0, 240, 255, 0.3);
-}
-
-.btn-pulse {
-  position: absolute;
-  inset: -2px;
-  border-radius: 8px;
-  background: radial-gradient(
-    circle at center,
-    rgba(0, 240, 255, 0.25) 0%,
-    transparent 70%
-  );
+.login-card.dormant .orbit-path,
+.login-card.dormant .submit-zone,
+.login-card.dormant .login-hint {
   opacity: 0;
   pointer-events: none;
 }
 
-@keyframes pulsarBeat {
-  0%,
-  100% {
-    transform: scale(0.95);
-    opacity: 0.6;
+.login-card.dormant {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.login-card.awakened .orbit-path {
+  opacity: 1;
+}
+
+.login-card.awakened {
+  opacity: 1;
+  transition: opacity 0.8s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Slogan section
+   -------------------------------------------------------------------------- */
+.slogan-title {
+  font-size: 24px;
+  font-weight: 300;
+  color: #d0dce8;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  text-shadow: 0 0 20px rgba(120, 180, 255, 0.15);
+  font-style: italic;
+}
+
+.slogan-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #3a4a60;
+  letter-spacing: 0.25em;
+  margin-top: 8px;
+  text-transform: lowercase;
+}
+
+/* --------------------------------------------------------------------------
+   Orbit stage - two companion stars around the singularity
+   -------------------------------------------------------------------------- */
+.orbit-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 390px;
+  height: 250px;
+  transform: translate(-50%, -50%);
+}
+
+.orbit-path {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250px;
+  height: 112px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.08);
+  transition: opacity 0.8s ease, border-color 0.8s ease;
+}
+
+.orbit-path-b {
+  width: 310px;
+  height: 138px;
+  transform: translate(-50%, -50%) rotate(18deg);
+  border-color: rgba(245, 158, 11, 0.16);
+}
+
+.field-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: text;
+  width: 110px;
+  height: 78px;
+  padding: 8px;
+  z-index: 2;
+  transition: transform 0.4s ease;
+}
+
+.identity-orbit {
+  position: absolute;
+  top: 18px;
+  left: 36px;
+  transform: rotate(-12deg) translateX(0) rotate(12deg);
+}
+
+.key-orbit {
+  position: absolute;
+  right: 28px;
+  bottom: 12px;
+  transform: rotate(18deg) translateX(0) rotate(-18deg);
+}
+
+.field-zone.active { transform: scale(1.12); }
+
+.identity-orbit.active {
+  transform: rotate(-12deg) translateX(0) rotate(12deg) scale(1.12);
+}
+
+.key-orbit.active {
+  transform: rotate(18deg) translateX(0) rotate(-18deg) scale(1.12);
+}
+
+/* Light point - the only visible anchor */
+.light-point {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow:
+    0 0 8px rgba(96, 165, 250, 0.8),
+    0 0 20px rgba(96, 165, 250, 0.4),
+    0 0 40px rgba(96, 165, 250, 0.15);
+  animation: lightPointPulse 3s ease-in-out infinite;
+  transition: background 0.6s ease, box-shadow 0.6s ease;
+}
+
+.light-point.golden {
+  background: #fbbf24;
+  box-shadow:
+    0 0 8px rgba(251, 191, 36, 0.8),
+    0 0 20px rgba(251, 191, 36, 0.4),
+    0 0 40px rgba(251, 191, 36, 0.15);
+}
+
+.field-zone.active .light-point {
+  animation: lightPointActive 1.5s ease-in-out infinite;
+}
+
+@keyframes lightPointPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes lightPointActive {
+  0%, 100% { opacity: 0.9; transform: scale(1.1); }
+  50% { opacity: 1; transform: scale(1.4); }
+}
+
+.field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #86a9d2;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  transition: color 0.4s ease;
+}
+
+.field-zone.active .field-label {
+  color: #d0e5ff;
+}
+
+.field-zone.active .light-point:not(.golden) ~ .field-label {
+  color: #6080b0;
+}
+
+/* Hidden input - invisible but functional */
+.hidden-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  cursor: text;
+  z-index: 5;
+}
+
+/* --------------------------------------------------------------------------
+   Floating characters - star dust aggregation
+   -------------------------------------------------------------------------- */
+.floating-chars-container {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  pointer-events: none;
+  height: 20px;
+  overflow: visible;
+}
+
+.floating-char {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #a0c8f0;
+  text-shadow:
+    0 0 6px rgba(96, 165, 250, 0.6),
+    0 0 12px rgba(96, 165, 250, 0.3);
+  animation: charMaterialize 1.8s ease-out forwards;
+  white-space: nowrap;
+}
+
+.identity-char { --flow-x: 92px; --flow-y: 72px; }
+.key-char { --flow-x: -92px; --flow-y: -72px; }
+
+@keyframes charMaterialize {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(8px);
+    filter: blur(4px);
+    text-shadow: 0 0 20px rgba(96, 165, 250, 1), 0 0 40px rgba(96, 165, 250, 0.5);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.1) translateY(-2px);
+    filter: blur(0);
+    text-shadow: 0 0 8px rgba(96, 165, 250, 0.8), 0 0 16px rgba(96, 165, 250, 0.4);
+  }
+  35% {
+    transform: scale(1) translateY(0);
   }
   50% {
-    transform: scale(1.08);
     opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
   }
+  100% {
+    opacity: 0;
+    transform: translate(var(--flow-x), var(--flow-y)) scale(0.15);
+    filter: blur(2px);
+    text-shadow: 0 0 4px rgba(96, 165, 250, 0.3);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Golden dots - password particle orbs
+   -------------------------------------------------------------------------- */
+.golden-dots-container {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+  height: 20px;
+  align-items: center;
+}
+
+.golden-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #fef3c7, #fbbf24 40%, #d97706 80%);
+  box-shadow:
+    0 0 4px rgba(251, 191, 36, 0.8),
+    0 0 10px rgba(251, 191, 36, 0.4);
+  transform-origin: 36px 22px;
+  animation: goldenAppear 0.4s ease-out forwards, goldenOrbit 4.5s ease-in-out infinite;
+}
+
+@keyframes goldenAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.3);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes goldenOrbit {
+  0% { transform: rotate(var(--orbit)) translateX(25px); }
+  50% { transform: rotate(calc(var(--orbit) + 180deg)) translateX(32px); }
+  100% { transform: rotate(calc(var(--orbit) + 360deg)) translateX(25px); }
+}
+
+/* --------------------------------------------------------------------------
+   Submit button - minimal glowing text
+   -------------------------------------------------------------------------- */
+.submit-zone {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 24px;
+  transition: opacity 0.8s ease;
+}
+
+.submit-btn {
+  background: none;
+  border: none;
+  cursor: default;
+  padding: 4px 12px;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  color: #2a3a50;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.6s ease, transform 0.6s ease, color 0.4s ease;
+  pointer-events: none;
+  position: relative;
+}
+
+.submit-btn.visible {
+  opacity: 1;
+  transform: translateY(0);
+  color: #80a0d0;
+  cursor: pointer;
+  pointer-events: auto;
+  text-shadow: 0 0 10px rgba(96, 165, 250, 0.2);
+}
+
+.submit-btn.visible:hover {
+  color: #c0d8f0;
+  text-shadow: 0 0 16px rgba(96, 165, 250, 0.4);
+}
+
+.submit-btn.warping {
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.6);
+  animation: warpPulse 0.8s ease-in-out infinite;
+}
+
+.submit-btn.locked {
+  color: #6a4a4a;
+}
+
+@keyframes warpPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
 /* --------------------------------------------------------------------------
    Hint text
    -------------------------------------------------------------------------- */
 .login-hint {
-  margin-top: 16px;
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  color: #4a6080;
+  font-size: 9px;
+  color: #7794b8;
   text-align: center;
-  min-height: 16px;
+  min-height: 14px;
+  letter-spacing: 0.05em;
   transition: color 0.4s ease;
+  max-width: 320px;
 }
 
-.login-hint.ready {
-  color: #4a90d9;
-}
-
-.login-hint.error {
-  color: #d97a7a;
-}
-
-.login-hint.success {
-  color: #7ad99a;
-}
-
-/* --------------------------------------------------------------------------
-   Animations
-   -------------------------------------------------------------------------- */
-@keyframes shakeInner {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-8px);
-  }
-  40% {
-    transform: translateX(8px);
-  }
-  60% {
-    transform: translateX(-6px);
-  }
-  80% {
-    transform: translateX(6px);
-  }
-}
-
-.login-card-inner.shake {
-  animation: shakeInner 0.42s cubic-bezier(0.36, 0, 0.66, -0.56);
-}
+.login-hint.ready { color: #5070a0; }
+.login-hint.error { color: #9a5a5a; }
+.login-hint.success { color: #5a9a7a; }
 
 /* --------------------------------------------------------------------------
    Responsive
    -------------------------------------------------------------------------- */
 @media (max-width: 480px) {
+  .slogan-title { font-size: 18px; }
+  .slogan-subtitle { font-size: 8px; }
+  .floating-char { font-size: 13px; }
+}
+
+/* Independent login matter. These particles are DOM-only and never touch the
+   Three.js galaxy geometry behind the form. */
+.login-card {
+  width: min(520px, 92vw);
+  height: 350px;
+}
+
+.aggregation-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 0;
+}
+
+.aggregation-particle {
+  --from-x: 0px;
+  --from-y: 0px;
+  --delay: 0s;
+  --particle-size: 2px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 50%;
+  background: #9dd3ff;
+  box-shadow: 0 0 7px #70b7ff, 0 0 14px rgba(66, 153, 225, 0.7);
+  opacity: 0;
+  animation: gatherLoginMatter 1.35s cubic-bezier(0.18, 0.72, 0.2, 1) var(--delay) both;
+}
+
+.aggregation-particle.warm {
+  background: #ffe2a3;
+  box-shadow: 0 0 7px #ffb95e, 0 0 15px rgba(245, 158, 11, 0.72);
+}
+
+.galaxy-form-body {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(430px, 88vw);
+  padding: 38px 46px 30px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at center, rgba(8, 18, 38, 0.82) 0%, rgba(4, 11, 25, 0.52) 52%, transparent 74%),
+    radial-gradient(ellipse at 30% 34%, rgba(43, 119, 190, 0.14), transparent 45%),
+    radial-gradient(ellipse at 72% 68%, rgba(218, 133, 43, 0.1), transparent 42%);
+  filter: blur(8px);
+  opacity: 0;
+  z-index: 1;
+  animation: materializeGalaxyForm 0.9s ease-out 0.72s forwards;
+}
+
+.galaxy-form-body::before,
+.galaxy-form-body::after {
+  content: '';
+  position: absolute;
+  inset: 14% -3%;
+  border: 1px solid rgba(111, 181, 241, 0.18);
+  border-radius: 50%;
+  transform: rotate(-5deg);
+  box-shadow: 0 0 20px rgba(57, 142, 220, 0.08), inset 0 0 24px rgba(40, 116, 190, 0.05);
+  pointer-events: none;
+}
+
+.galaxy-form-body::after {
+  inset: 22% 4%;
+  border-color: rgba(240, 174, 85, 0.12);
+  transform: rotate(7deg);
+}
+
+.galaxy-axis {
+  height: 1px;
+  margin: 0 0 18px;
+  background: linear-gradient(90deg, transparent, rgba(117, 190, 255, 0.5), rgba(255, 194, 112, 0.42), transparent);
+  box-shadow: 0 0 12px rgba(105, 174, 238, 0.26);
+  transform: scaleX(0);
+  animation: drawGalaxyAxis 0.8s ease-out 1.05s forwards;
+}
+
+.galaxy-field {
+  position: relative;
+  display: grid;
+  grid-template-columns: 17px 90px 1fr;
+  align-items: center;
+  min-height: 52px;
+  cursor: text;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: revealGalaxyField 0.65s ease-out 1.12s forwards;
+}
+
+.galaxy-field + .galaxy-field {
+  animation-delay: 1.24s;
+}
+
+.field-star {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.field-star.blue {
+  background: #d8efff;
+  box-shadow: 0 0 6px #78bdff, 0 0 16px rgba(54, 145, 235, 0.9);
+}
+
+.field-star.gold {
+  background: #fff0c9;
+  box-shadow: 0 0 6px #ffc46f, 0 0 16px rgba(240, 154, 49, 0.82);
+}
+
+.galaxy-field .field-label {
+  color: rgba(174, 203, 232, 0.66);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+}
+
+.galaxy-field input {
+  position: relative;
+  width: 100%;
+  padding: 9px 3px 8px;
+  border: 0;
+  border-bottom: 1px solid rgba(125, 183, 236, 0.25);
+  outline: 0;
+  background: transparent;
+  color: #dcecff;
+  caret-color: #8cc8ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 9px rgba(121, 190, 255, 0.42);
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  z-index: 2;
+}
+
+.galaxy-field input:-webkit-autofill {
+  -webkit-text-fill-color: #dcecff;
+  -webkit-box-shadow: 0 0 0 30px #071225 inset;
+}
+
+.galaxy-field.active input {
+  border-color: rgba(145, 207, 255, 0.72);
+  box-shadow: 0 8px 14px -12px rgba(94, 181, 255, 0.9);
+}
+
+.galaxy-field.active .field-star {
+  transform: scale(1.8);
+}
+
+.field-dust {
+  position: absolute;
+  right: 0;
+  bottom: 9px;
+  width: 64%;
+  height: 12px;
+  background: radial-gradient(circle, rgba(112, 190, 255, 0.55) 0 1px, transparent 1.4px) 0 0 / 13px 8px;
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.field-dust.warm {
+  background-image: radial-gradient(circle, rgba(255, 180, 82, 0.54) 0 1px, transparent 1.4px);
+}
+
+.galaxy-form-body .floating-chars-container,
+.galaxy-form-body .golden-dots-container {
+  top: 0;
+  left: auto;
+  right: 4px;
+  transform: none;
+  z-index: 3;
+}
+
+.galaxy-form-body .submit-zone {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  display: flex;
+  justify-content: center;
+  height: 30px;
+  margin-top: 10px;
+  transform: none;
+}
+
+.galaxy-form-body .submit-btn {
+  opacity: 0.38;
+  transform: none;
+}
+
+.galaxy-form-body .submit-btn.visible {
+  opacity: 1;
+}
+
+.galaxy-form-body .login-hint {
+  position: relative;
+  bottom: auto;
+  left: auto;
+  max-width: none;
+  margin-top: 8px;
+  transform: none;
+}
+
+@keyframes gatherLoginMatter {
+  0% {
+    opacity: 0;
+    transform: translate(var(--from-x), var(--from-y)) scale(0.2);
+  }
+  18% { opacity: 0.9; }
+  72% { opacity: 0.72; }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(1.7);
+  }
+}
+
+@keyframes materializeGalaxyForm {
+  0% { opacity: 0; filter: blur(9px); transform: translate(-50%, -50%) scale(0.72); }
+  60% { opacity: 0.92; filter: blur(1px); transform: translate(-50%, -50%) scale(1.025); }
+  100% { opacity: 1; filter: blur(0); transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes drawGalaxyAxis {
+  to { transform: scaleX(1); }
+}
+
+@keyframes revealGalaxyField {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .slogan-section {
+    top: 6vh;
+    left: 7vw;
+    width: 86vw;
+  }
+
+  .galaxy-form-body {
+    width: 90vw;
+    padding: 34px 24px 26px;
+  }
+
+  .galaxy-field {
+    grid-template-columns: 14px 76px 1fr;
+  }
+
+  .galaxy-field input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .submit-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .slogan-section {
+    top: max(18px, env(safe-area-inset-top));
+    left: max(24px, env(safe-area-inset-left));
+    width: 38vw;
+  }
+
+  .slogan-title {
+    font-size: 16px;
+  }
+
+  .slogan-subtitle {
+    display: none;
+  }
+
   .login-card {
-    padding: 36px 28px;
+    height: min(300px, 92dvh);
   }
 
-  .login-title {
-    font-size: 24px;
+  .galaxy-form-body {
+    width: min(430px, 58vw);
+    padding: 22px 30px 18px;
   }
 
-  .login-subtitle {
-    font-size: 9px;
+  .galaxy-field {
+    min-height: 46px;
   }
 
-  .input-field {
-    font-size: 16px; /* prevent iOS zoom on focus */
+  .galaxy-form-body .submit-zone,
+  .galaxy-form-body .login-hint {
+    margin-top: 2px;
   }
+}
 
-  .login-btn {
-    font-size: 14px;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .aggregation-particle { animation-duration: 0.01ms; }
+  .galaxy-form-body,
+  .galaxy-field,
+  .galaxy-axis { animation-delay: 0s; animation-duration: 0.01ms; }
 }

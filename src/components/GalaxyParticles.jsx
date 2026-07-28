@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { sharedState } from '../store/sharedState'
 import { galaxyVertexShader, galaxyFragmentShader } from '../shaders/galaxy.js'
 
-export function GalaxyParticles({ count = 50000 }) {
+export function GalaxyParticles({ count = 30000 }) {
   const pointsRef = useRef()
 
   const { geometry, material } = useMemo(() => {
@@ -16,7 +16,7 @@ export function GalaxyParticles({ count = 50000 }) {
 
     const branches = 4
     const galaxyRadius = 70
-    const spin = 1.3
+    const spin = -1.3
     const randomnessPower = 3.2
     const coreFactor = 0.12
 
@@ -98,7 +98,9 @@ export function GalaxyParticles({ count = 50000 }) {
         uFocusPoint: { value: new THREE.Vector3(0, 0, 0) },
         uFocusStrength: { value: 0 },
         uTransitionProgress: { value: 0 },
-        uIsTransitioning: { value: 0 }
+        uIsTransitioning: { value: 0 },
+        uMouseWorld: { value: new THREE.Vector3(0, 0, 0) },
+        uMousePushStrength: { value: 0 }
       },
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -120,6 +122,11 @@ export function GalaxyParticles({ count = 50000 }) {
     mat.uniforms.uFocusStrength.value = sharedState.focusStrength
     mat.uniforms.uTransitionProgress.value = sharedState.transitionProgress
     mat.uniforms.uIsTransitioning.value = sharedState.isTransitioning ? 1 : 0
+    mat.uniforms.uMouseWorld.value.copy(sharedState.mouseWorld)
+    mat.uniforms.uMousePushStrength.value = sharedState.mousePushStrength
+
+    // Decay mouse push strength
+    sharedState.mousePushStrength *= 0.92
   })
 
   return <points ref={pointsRef} geometry={geometry} material={material} frustumCulled={false} />

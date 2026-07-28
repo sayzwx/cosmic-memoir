@@ -15,27 +15,44 @@ import { sharedState } from '../store/sharedState'
 export function Effects({ isMobile }) {
   const chromaRef = useRef()
   const bloomRef = useRef()
+  const vignetteRef = useRef()
 
   useFrame(() => {
     if (sharedState.isTransitioning) {
       const t = sharedState.transitionProgress
 
+      // Progressive chromatic aberration for warp distortion
       if (chromaRef.current) {
-        const offset = t * 0.025
-        chromaRef.current.offset.set(offset, offset)
+        const offset = 0.0005 + Math.sin(Math.min(1, t / 0.88) * Math.PI) * 0.022
+        const chromaAngle = t * Math.PI * 5
+        chromaRef.current.offset.set(
+          Math.cos(chromaAngle) * offset,
+          Math.sin(chromaAngle) * offset
+        )
       }
 
+      // Bloom intensifies during warp
       if (bloomRef.current) {
-        bloomRef.current.intensity = 1.5 + t * 4.0
-        bloomRef.current.radius = 0.8 + t * 0.4
+        bloomRef.current.intensity = 0.5 + t * 2.2
+        bloomRef.current.radius = 0.5 + t * 0.5
+        bloomRef.current.luminanceThreshold = Math.max(0.1, 0.35 - t * 0.2)
+      }
+
+      // Vignette darkens edges for tunnel effect
+      if (vignetteRef.current) {
+        vignetteRef.current.darkness = 0.82 + Math.sin(Math.min(1, t / 0.88) * Math.PI) * 0.16
       }
     } else {
       if (chromaRef.current) {
         chromaRef.current.offset.set(0.0005, 0.0005)
       }
       if (bloomRef.current) {
-        bloomRef.current.intensity = 1.5
-        bloomRef.current.radius = 0.8
+        bloomRef.current.intensity = 0.5
+        bloomRef.current.radius = 0.5
+        bloomRef.current.luminanceThreshold = 0.35
+      }
+      if (vignetteRef.current) {
+        vignetteRef.current.darkness = 0.82
       }
     }
   })
@@ -44,10 +61,10 @@ export function Effects({ isMobile }) {
     <EffectComposer multisampling={isMobile ? 0 : 4}>
       <Bloom
         ref={bloomRef}
-        intensity={1.5}
-        radius={0.8}
-        luminanceThreshold={0.2}
-        luminanceSmoothing={0.4}
+        intensity={0.5}
+        radius={0.5}
+        luminanceThreshold={0.35}
+        luminanceSmoothing={0.3}
         mipmapBlur
       />
 
@@ -67,7 +84,7 @@ export function Effects({ isMobile }) {
         modulationOffset={0}
       />
 
-      <Vignette eskil={false} offset={0.1} darkness={0.82} />
+      <Vignette ref={vignetteRef} eskil={false} offset={0.1} darkness={0.82} />
 
       <Noise
         premultiply
