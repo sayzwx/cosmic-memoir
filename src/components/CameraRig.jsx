@@ -12,6 +12,7 @@ const _intersect = new THREE.Vector3()
 const _transitionStart = new THREE.Vector3()
 const _transitionDirection = new THREE.Vector3()
 const _transitionTarget = new THREE.Vector3()
+const TRANSITION_DURATION_MS = 4000
 
 export function CameraRig({ loginCardRef }) {
   const { camera, gl } = useThree()
@@ -29,6 +30,7 @@ export function CameraRig({ loginCardRef }) {
   const warpRoll = useRef(0)
   const lastMouseTime = useRef(0)
   const transitionStarted = useRef(false)
+  const transitionStartTime = useRef(0)
 
   useEffect(() => {
     const canvas = gl.domElement
@@ -105,12 +107,13 @@ export function CameraRig({ loginCardRef }) {
       if (!transitionStarted.current) {
         _transitionStart.copy(camera.position)
         _transitionDirection.copy(_transitionStart).normalize().negate()
+        transitionStartTime.current = performance.now()
         transitionStarted.current = true
       }
 
       sharedState.transitionProgress = Math.min(
         1,
-        sharedState.transitionProgress + dt * 0.25
+        (performance.now() - transitionStartTime.current) / TRANSITION_DURATION_MS
       )
       const progress = sharedState.transitionProgress
       const approach = easeInOutCubic(Math.min(1, progress / 0.58))

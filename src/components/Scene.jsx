@@ -28,7 +28,7 @@ export function Scene({ loginCardRef, isLoginAwakened, onLoginAwaken }) {
         stencil: false,
         depth: true
       }}
-      dpr={isMobile ? [1, 1] : [1, 2]}
+      dpr={isMobile ? 1 : [1, 1.5]}
       style={{
         position: 'fixed',
         top: 0,
@@ -46,7 +46,7 @@ export function Scene({ loginCardRef, isLoginAwakened, onLoginAwaken }) {
       <AccretionDisk />
       <PhotonSystem />
       <EventHorizonTunnel />
-      <Effects isMobile={isMobile} />
+      <Effects />
     </Canvas>
   )
 }

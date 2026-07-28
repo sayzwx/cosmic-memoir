@@ -3,7 +3,6 @@ import { useFrame } from '@react-three/fiber'
 import {
   EffectComposer,
   Bloom,
-  DepthOfField,
   Vignette,
   ChromaticAberration,
   Noise
@@ -12,7 +11,7 @@ import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { sharedState } from '../store/sharedState'
 
-export function Effects({ isMobile }) {
+export function Effects() {
   const chromaRef = useRef()
   const bloomRef = useRef()
   const vignetteRef = useRef()
@@ -58,7 +57,7 @@ export function Effects({ isMobile }) {
   })
 
   return (
-    <EffectComposer multisampling={isMobile ? 0 : 4}>
+    <EffectComposer multisampling={0}>
       <Bloom
         ref={bloomRef}
         intensity={0.5}
@@ -67,15 +66,6 @@ export function Effects({ isMobile }) {
         luminanceSmoothing={0.3}
         mipmapBlur
       />
-
-      {!isMobile && (
-        <DepthOfField
-          focusDistance={0.018}
-          focalLength={0.04}
-          bokehScale={2.2}
-          height={480}
-        />
-      )}
 
       <ChromaticAberration
         ref={chromaRef}
