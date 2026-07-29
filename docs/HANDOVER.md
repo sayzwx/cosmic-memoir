@@ -1,5 +1,7 @@
 # CosmicMemoir 宇宙回忆录 - 交接文档
 
+> **历史文档警告**：本文件记录的是 2026-07-28 版本，发布方式、测试数量和暗物质章节实现已经过期。当前交接请阅读 [`HANDOVER_2026-07-29.md`](./HANDOVER_2026-07-29.md)。
+
 > **项目仓库**: https://github.com/sayzwx/cosmic-memoir  
 > **线上地址**: https://sayzwx.github.io/cosmic-memoir/  
 > **文档日期**: 2026-07-28  

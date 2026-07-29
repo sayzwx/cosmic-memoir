@@ -60,6 +60,7 @@ Vite multi-page site:
 - M2 narrative UI specification: `docs/M2_NARRATIVE_UI_SPEC.md` (approved, awaiting implementation).
 - M8 dark-matter chapter: cinematic spatial-memory v2 implemented with a GPU-batched deep-space environment, orbital camera, five spatial photo entities, mobile/desktop quality tiers, and local replaceable placeholders under `assets/memories/m8/`.
 - Planning is split into page experience, journey and controls, content system, shared rendering foundation, and five independent chapter scenes.
+- Current full Chinese handover: `docs/HANDOVER_2026-07-29.md`.
 
 ## Commands
 
@@ -72,10 +73,10 @@ npx gh-pages -d dist -b gh-pages -m "deploy: message"
 
 ## Verification
 
-- Tests: 79 Vitest tests
+- Tests: 93 Vitest tests
 - Latest `npm run build`: passed
-- Latest `npm test`: passed (79/79)
-- Browser WebGL checks: no errors on the latest local previews
+- Latest `npm test`: passed (93/93)
+- M8 JavaScript syntax and data-contract checks: passed
 
 ## Caution
 
