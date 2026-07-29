@@ -142,8 +142,21 @@ export class InputAdapter {
 
           this.emit('dragStart', { x: touch.clientX, y: touch.clientY });
         } else if (e.touches.length === 2) {
+          if (this.state.isDragging) {
+            this.emit('dragEnd', {
+              totalDeltaX: this.state.lastX - this.state.startX,
+              totalDeltaY: this.state.lastY - this.state.startY,
+              cancelled: true
+            });
+          }
           this.state.isDragging = false;
           this.state.pinchStartDist = this.getPinchDistance(e.touches);
+          this.emit('pinch', {
+            scale: 1,
+            centerX: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+            centerY: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+            phase: 'start'
+          });
         }
         break;
       }
@@ -181,7 +194,7 @@ export class InputAdapter {
           const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
           const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
-          this.emit('pinch', { scale, centerX, centerY });
+          this.emit('pinch', { scale, centerX, centerY, phase: 'move' });
         }
         break;
       }
@@ -201,6 +214,9 @@ export class InputAdapter {
         }
 
         if (e.touches.length < 2) {
+          if (this.state.pinchStartDist > 0) {
+            this.emit('pinch', { scale: 1, centerX: 0, centerY: 0, phase: 'end' });
+          }
           this.state.pinchStartDist = 0;
         }
         break;

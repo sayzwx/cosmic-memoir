@@ -11,6 +11,8 @@ Vite multi-page site:
 
 ## Current Login Experience
 
+**Status: completed and frozen.** The login page is no longer an active optimization area. Preserve its current visual design, interaction and performance limits unless a new request explicitly reopens it.
+
 1. Deep-space nebula, background streaking star lights, layered celestial systems, and a central black hole.
 2. Cursor is a DOM meteor with directional tail: `src/components/MeteorCursor.jsx`.
 3. Clicking a companion star triggers a restrained particle burst, then wakes the form after 620 ms.
@@ -50,6 +52,14 @@ Vite multi-page site:
 | `src/components/MeteorCursor.jsx` | Meteor pointer |
 | `src/styles/login.css` | Login, meteor, star-river styles |
 | `universe.html`, `js/`, `engine/`, `data/` | Memoir page |
+
+## Current Main Page Phase
+
+- Status: planning and optimization started.
+- Module map: `docs/MAIN_PAGE_MODULES.md`.
+- M2 narrative UI specification: `docs/M2_NARRATIVE_UI_SPEC.md` (approved, awaiting implementation).
+- M8 dark-matter chapter: cinematic spatial-memory v2 implemented with a GPU-batched deep-space environment, orbital camera, five spatial photo entities, mobile/desktop quality tiers, and local replaceable placeholders under `assets/memories/m8/`.
+- Planning is split into page experience, journey and controls, content system, shared rendering foundation, and five independent chapter scenes.
 
 ## Commands
 

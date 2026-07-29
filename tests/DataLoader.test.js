@@ -210,9 +210,97 @@ describe('DataLoader', () => {
   });
 
   it('test_preloadImages_memoriesWithoutImages_returnsEmptyArray', async () => {
-    // 所有记忆的 media 都没有 images/thumbnail
-    const results = await loader.preloadImages(memoriesData.memories);
+    const results = await loader.preloadImages([{ media: {} }]);
 
     expect(results).toEqual([]);
+  });
+
+  it('test_preloadImages_loadsAndDeduplicatesM8Photos', async () => {
+    const loaded = [];
+    class MockImage {
+      set src(value) {
+        loaded.push(value);
+        queueMicrotask(() => this.onload());
+      }
+    }
+    vi.stubGlobal('Image', MockImage);
+    const memory = memoriesData.memories.find(item => item.id === 'mem_1995_shadow');
+
+    const results = await loader.preloadImages([memory]);
+    const expectedUrls = new Set([
+      memory.media.primaryImage,
+      ...memory.media.photos.map(photo => photo.src)
+    ]);
+
+    expect(results).toHaveLength(expectedUrls.size);
+    expect(new Set(loaded)).toEqual(expectedUrls);
+    expect(results.every(result => result.status === 'fulfilled')).toBe(true);
+  });
+
+  it('test_preloadImages_includesOptionalPreviewSrc', async () => {
+    const loaded = [];
+    class MockImage {
+      set src(value) {
+        loaded.push(value);
+        queueMicrotask(() => this.onload());
+      }
+    }
+    vi.stubGlobal('Image', MockImage);
+
+    await loader.preloadImages([{ media: { photos: [{
+      src: './full.svg',
+      previewSrc: './preview.svg'
+    }] } }]);
+
+    expect(loaded).toEqual(['./full.svg', './preview.svg']);
+  });
+
+  it('test_getPhotoByRole_returnsConfiguredPhoto', () => {
+    const memory = memoriesData.memories.find(item => item.id === 'mem_1995_shadow');
+
+    expect(loader.getPhotoByRole(memory, 'lensReflection')).toEqual(
+      expect.objectContaining({ role: 'lensReflection', src: expect.any(String) })
+    );
+    expect(loader.getPhotoByRole(memory, 'missing')).toBeNull();
+  });
+
+  it('test_getHiddenMemory_resolvesOnlyHiddenRecords', async () => {
+    fetchMock.mockResolvedValueOnce(mockOkResponse(memoriesData));
+    const memory = memoriesData.memories.find(item => item.id === 'mem_1995_shadow');
+
+    const hidden = await loader.getHiddenMemory(memory);
+
+    expect(hidden?.id).toBe('mem_1998_humidity');
+    expect(hidden?.meta?.isHidden).toBe(true);
+  });
+
+  it('test_validateSpatialMemoryV2_acceptsM8BeforeMount', () => {
+    const memory = memoriesData.memories.find(item => item.experience?.id === 'M8');
+
+    expect(loader.validateSpatialMemoryV2(memory)).toBe(true);
+    expect(loader.validateUniverse(memoriesData)).toBe(true);
+  });
+
+  it('test_loadUniverse_rejectsInvalidSpatialContract', async () => {
+    const invalid = structuredClone(memoriesData);
+    invalid.memories.find(item => item.experience?.id === 'M8').media.photos[0].position = [0, 0];
+    fetchMock.mockResolvedValueOnce(mockOkResponse(invalid));
+
+    await expect(loader.loadUniverse()).rejects.toThrow(/invalid spatial vectors/i);
+    expect(loader.cache.has('universe')).toBe(false);
+  });
+
+  it('test_validateSpatialMemoryV2_rejectsUnknownUnlockDependency', () => {
+    const memory = structuredClone(memoriesData.memories.find(item => item.experience?.id === 'M8'));
+    memory.media.photos[1].unlockAfter = ['missing-entity'];
+
+    expect(() => loader.validateSpatialMemoryV2(memory)).toThrow(/references unknown entity/);
+  });
+
+  it('test_validateSpatialMemoryV2_rejectsCyclicUnlockGraph', () => {
+    const memory = structuredClone(memoriesData.memories.find(item => item.experience?.id === 'M8'));
+    memory.media.photos[0].unlockAfter = ['m8-dawn'];
+
+    expect(() => loader.validateSpatialMemoryV2(memory)).toThrow(/contains a cycle/);
   });
 });

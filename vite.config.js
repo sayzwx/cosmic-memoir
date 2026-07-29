@@ -14,6 +14,7 @@ export default defineConfig({
         { src: 'css/**/*', dest: 'css' },
         { src: 'engine/**/*', dest: 'engine' },
         { src: 'data/**/*', dest: 'data' },
+        { src: 'assets/**/*', dest: 'assets' },
         { src: '.nojekyll', dest: '' }
       ]
     })

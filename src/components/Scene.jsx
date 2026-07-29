@@ -24,13 +24,15 @@ export function Scene({ loginCardRef, isLoginAwakened, onLoginAwaken }) {
         far: 2000
       }}
       gl={{
-        antialias: !isMobile,
+        // The composer renders through its own targets, so default-framebuffer
+        // MSAA adds cost without smoothing the final image.
+        antialias: false,
         alpha: false,
         powerPreference: 'high-performance',
         stencil: false,
         depth: true
       }}
-      dpr={isMobile ? 1 : [1, 1.5]}
+      dpr={isMobile ? 1 : [1, 1.25]}
       style={{
         position: 'fixed',
         top: 0,

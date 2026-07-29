@@ -44,7 +44,9 @@ export function GalaxyRiver() {
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect()
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
+      // This oversized translucent canvas is composited over WebGL. A modest
+      // DPR cap keeps that blend affordable while retaining subpixel stars.
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 1.25)
       width = Math.max(1, bounds.width)
       height = Math.max(1, bounds.height)
       canvas.width = Math.round(width * pixelRatio)

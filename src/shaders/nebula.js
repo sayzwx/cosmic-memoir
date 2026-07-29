@@ -28,7 +28,9 @@ export const nebulaFragmentShader = /* glsl */ `
   float fbm3D(vec3 p) {
     float v = 0.0;
     float a = 0.5;
-    for (int i = 0; i < 5; i++) {
+    // This function runs repeatedly for every background pixel. Four octaves
+    // preserve the broad clouds and fine wisps without an imperceptible fifth.
+    for (int i = 0; i < 4; i++) {
       v += a * noise3D(p);
       p *= 2.3;
       a *= 0.5;

@@ -27,16 +27,21 @@ export class SceneRouter {
     this.currentScene = null;
     this.currentData = null;
     this.isTransitioning = false;
+    this.destroyed = false;
+    this.mountGeneration = 0;
   }
 
   async mount(memoryData, options = {}) {
-    if (this.isTransitioning) return;
+    if (this.isTransitioning || this.destroyed) return false;
+    const generation = ++this.mountGeneration;
     this.isTransitioning = true;
+    let renderer = null;
 
     try {
       if (this.currentScene) {
         if (options.transition === 'collapse') {
           await this.playCollapseTransition();
+          if (generation !== this.mountGeneration || this.destroyed) return false;
         }
         this.currentScene.destroy();
         this.currentScene = null;
@@ -51,17 +56,26 @@ export class SceneRouter {
       }
 
       const RendererClass = await rendererFactory();
+      if (generation !== this.mountGeneration || this.destroyed) return false;
 
       const qualitySettings = options.quality || { antialias: true };
 
-      const renderer = new RendererClass(this.canvas, memoryData, qualitySettings);
+      renderer = new RendererClass(this.canvas, memoryData, qualitySettings);
 
       await renderer.init();
+      if (generation !== this.mountGeneration || this.destroyed) {
+        renderer.destroy();
+        return false;
+      }
 
       renderer.start();
 
       if (options.transition === 'wormhole') {
         await this.playWormholeEntry();
+        if (generation !== this.mountGeneration || this.destroyed) {
+          renderer.destroy();
+          return false;
+        }
       }
 
       this.currentScene = renderer;
@@ -70,13 +84,16 @@ export class SceneRouter {
       window.dispatchEvent(new CustomEvent('sceneMounted', {
         detail: { memoryData, scene: renderer }
       }));
+      return true;
     } catch (error) {
+      if (renderer && renderer !== this.currentScene) renderer.destroy();
       console.error('SceneRouter mount error:', error);
       window.dispatchEvent(new CustomEvent('sceneError', {
         detail: { error, memoryData }
       }));
+      return false;
     } finally {
-      this.isTransitioning = false;
+      if (generation === this.mountGeneration) this.isTransitioning = false;
     }
   }
 
@@ -109,13 +126,13 @@ export class SceneRouter {
         );
         break;
       case 'dragEnd':
-        this.currentScene.onDragEnd(data.totalDeltaX, data.totalDeltaY);
+        this.currentScene.onDragEnd(data.totalDeltaX, data.totalDeltaY, data.cancelled === true);
         break;
       case 'tap':
         this.currentScene.onTap(data.x, data.y);
         break;
       case 'pinch':
-        this.currentScene.onPinch(data.scale, data.centerX, data.centerY);
+        this.currentScene.onPinch(data.scale, data.centerX, data.centerY, data.phase);
         break;
     }
   }
@@ -139,6 +156,8 @@ export class SceneRouter {
   }
 
   destroy() {
+    this.destroyed = true;
+    this.mountGeneration++;
     if (this.currentScene) {
       this.currentScene.destroy();
       this.currentScene = null;

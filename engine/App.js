@@ -21,6 +21,8 @@ export class CosmicMemoirApp {
     this.currentMemories = [];
 
     this._resizeTimer = null;
+    this._navigationLocked = false;
+    this._onResize = null;
 
     this.bindInput();
     this.bindResize();
@@ -40,12 +42,9 @@ export class CosmicMemoirApp {
   }
 
   async loadChapter(chapterIndex) {
-    this.currentChapter = chapterIndex;
-    this.currentMemoryIndex = 0;
+    const memories = await this.data.getMemoriesByChapter(chapterIndex);
 
-    this.currentMemories = await this.data.getMemoriesByChapter(chapterIndex);
-
-    if (this.currentMemories.length === 0) {
+    if (memories.length === 0) {
       const nextChapter = chapterIndex + 1;
       const nextMemories = await this.data.getMemoriesByChapter(nextChapter);
 
@@ -58,22 +57,26 @@ export class CosmicMemoirApp {
       return;
     }
 
-    await this.data.preloadImages(this.currentMemories);
+    await this.data.preloadImages(memories);
 
     const transition = chapterIndex === 0 ? 'wormhole' : 'collapse';
 
-    await this.router.mount(this.currentMemories[0], {
+    this.currentChapter = chapterIndex;
+    this.currentMemoryIndex = 0;
+    this.currentMemories = memories;
+    const mounted = await this.router.mount(memories[0], {
       transition,
-      quality: this.profiler.getSettings()
+      quality: { ...this.profiler.getSettings(), quality: this.profiler.quality }
     });
+    return mounted;
   }
 
   async nextMemory() {
-    if (this.router.isTransitioning) return;
-
-    this.currentMemoryIndex++;
-
-    if (this.currentMemoryIndex >= this.currentMemories.length) {
+    if (this.router.isTransitioning || this._navigationLocked) return;
+    this._navigationLocked = true;
+    try {
+      const targetIndex = this.currentMemoryIndex + 1;
+      if (targetIndex >= this.currentMemories.length) {
       const nextChapter = this.currentChapter + 1;
       const nextMemories = await this.data.getMemoriesByChapter(nextChapter);
 
@@ -84,23 +87,34 @@ export class CosmicMemoirApp {
 
       await this.loadChapter(nextChapter);
       return;
-    }
+      }
 
-    await this.router.mount(this.currentMemories[this.currentMemoryIndex], {
+    const previousIndex = this.currentMemoryIndex;
+    this.currentMemoryIndex = targetIndex;
+    const mounted = await this.router.mount(this.currentMemories[targetIndex], {
       transition: 'wormhole',
-      quality: this.profiler.getSettings()
+      quality: { ...this.profiler.getSettings(), quality: this.profiler.quality }
     });
+    if (!mounted) this.currentMemoryIndex = previousIndex;
+    } finally {
+      this._navigationLocked = false;
+    }
   }
 
   async prevMemory() {
-    if (this.router.isTransitioning) return;
+    if (this.router.isTransitioning || this._navigationLocked) return;
+    this._navigationLocked = true;
+    try {
 
     if (this.currentMemoryIndex > 0) {
-      this.currentMemoryIndex--;
-      await this.router.mount(this.currentMemories[this.currentMemoryIndex], {
+      const targetIndex = this.currentMemoryIndex - 1;
+      const previousIndex = this.currentMemoryIndex;
+      this.currentMemoryIndex = targetIndex;
+      const mounted = await this.router.mount(this.currentMemories[targetIndex], {
         transition: 'collapse',
-        quality: this.profiler.getSettings()
+        quality: { ...this.profiler.getSettings(), quality: this.profiler.quality }
       });
+      if (!mounted) this.currentMemoryIndex = previousIndex;
       return;
     }
 
@@ -109,15 +123,28 @@ export class CosmicMemoirApp {
       const prevMemories = await this.data.getMemoriesByChapter(prevChapter);
 
       if (prevMemories.length > 0) {
+        const targetIndex = prevMemories.length - 1;
+        const previousState = {
+          chapter: this.currentChapter,
+          index: this.currentMemoryIndex,
+          memories: this.currentMemories
+        };
         this.currentChapter = prevChapter;
-        this.currentMemoryIndex = prevMemories.length - 1;
+        this.currentMemoryIndex = targetIndex;
         this.currentMemories = prevMemories;
-
-        await this.router.mount(this.currentMemories[this.currentMemoryIndex], {
+        const mounted = await this.router.mount(prevMemories[targetIndex], {
           transition: 'collapse',
-          quality: this.profiler.getSettings()
+          quality: { ...this.profiler.getSettings(), quality: this.profiler.quality }
         });
+        if (!mounted) {
+          this.currentChapter = previousState.chapter;
+          this.currentMemoryIndex = previousState.index;
+          this.currentMemories = previousState.memories;
+        }
       }
+    }
+    } finally {
+      this._navigationLocked = false;
     }
   }
 
@@ -148,7 +175,7 @@ export class CosmicMemoirApp {
   }
 
   bindResize() {
-    window.addEventListener('resize', () => {
+    this._onResize = () => {
       if (this._resizeTimer) {
         clearTimeout(this._resizeTimer);
       }
@@ -158,7 +185,8 @@ export class CosmicMemoirApp {
         const height = this.canvas.clientHeight || window.innerHeight;
         this.router.handleResize(width, height);
       }, 250);
-    });
+    };
+    window.addEventListener('resize', this._onResize);
   }
 
   destroy() {
@@ -168,6 +196,8 @@ export class CosmicMemoirApp {
     }
 
     this.profiler.stop();
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
+    this._onResize = null;
     this.router.destroy();
     this.input.destroy();
     this.data.clearCache();

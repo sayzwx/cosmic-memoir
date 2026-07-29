@@ -20,7 +20,7 @@ const noiseGLSL = `
   float fbm(vec3 p) {
     float value = 0.0;
     float amplitude = 0.5;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 4; i++) {
       value += noise(p) * amplitude;
       p = p * 2.03 + 7.1;
       amplitude *= 0.5;

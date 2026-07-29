@@ -198,4 +198,99 @@ describe('memories.json data integrity', () => {
     const uniqueIds = new Set(ids);
     expect(uniqueIds.size).toBe(ids.length);
   });
+
+  it('test_m8PhotoRolesAreCompleteAndUnique', () => {
+    const memory = memories.find(item => item.id === 'mem_1995_shadow');
+    const photos = memory.media.photos;
+    const expectedRoles = ['cover', 'letter', 'hiddenMemory', 'lensReflection', 'epilogue'];
+
+    expect(photos).toHaveLength(expectedRoles.length);
+    expect(new Set(photos.map(photo => photo.role))).toEqual(new Set(expectedRoles));
+    photos.forEach(photo => {
+      expect(photo.src).toMatch(/^\.\/assets\/memories\/m8\/.+\.(svg|webp|avif)$/);
+      expect(photo.alt.trim().length).toBeGreaterThan(0);
+      expect(photo.caption.trim().length).toBeGreaterThan(0);
+    });
+  });
+
+  it('test_m8DeclaresExplicitSpatialMemoryV2Experience', () => {
+    const memory = memories.find(item => item.id === 'mem_1995_shadow');
+    const ids = memory.media.photos.map(photo => photo.id);
+
+    expect(memory.experience).toEqual({
+      id: 'M8',
+      variant: 'deepSpaceSpatialMemory',
+      version: 2,
+      entityOrder: ids
+    });
+    expect(memories.filter(item => item.experience?.id === 'M8')).toHaveLength(1);
+  });
+
+  it('test_m8HasExactlyFiveCompleteSpatialEntities', () => {
+    const memory = memories.find(item => item.experience?.id === 'M8');
+    const photos = memory.media.photos;
+
+    expect(photos).toHaveLength(5);
+    expect(new Set(photos.map(photo => photo.id)).size).toBe(5);
+    photos.forEach(photo => {
+      ['id', 'title', 'body', 'role', 'src', 'alt', 'caption', 'accent'].forEach(field => {
+        expect(typeof photo[field]).toBe('string');
+        expect(photo[field].trim().length).toBeGreaterThan(0);
+      });
+      expect(photo.position).toHaveLength(3);
+      expect(photo.rotation).toHaveLength(3);
+      expect(photo.size).toHaveLength(2);
+      expect(photo.focusOffset).toHaveLength(3);
+      expect([...photo.position, ...photo.rotation, ...photo.size, ...photo.focusOffset]
+        .every(Number.isFinite)).toBe(true);
+      expect(photo.size.every(value => value > 0)).toBe(true);
+      expect(Array.isArray(photo.unlockAfter)).toBe(true);
+      expect(photo.lensingStrength).toBeGreaterThanOrEqual(0);
+      expect(typeof photo.discovery.type).toBe('string');
+    });
+  });
+
+  it('test_m8UnlockGraphReferencesEntitiesAndIsAcyclic', () => {
+    const photos = memories.find(item => item.experience?.id === 'M8').media.photos;
+    const dependencies = new Map(photos.map(photo => [photo.id, photo.unlockAfter]));
+    dependencies.forEach(required => required.forEach(id => expect(dependencies.has(id)).toBe(true)));
+    const visiting = new Set();
+    const visited = new Set();
+    const visit = id => {
+      expect(visiting.has(id)).toBe(false);
+      if (visited.has(id)) return;
+      visiting.add(id);
+      dependencies.get(id).forEach(visit);
+      visiting.delete(id);
+      visited.add(id);
+    };
+    dependencies.forEach((_, id) => visit(id));
+    expect(visited.size).toBe(5);
+  });
+
+  it('test_m8KeepsLocalPhotoPathsAndLegacyMediaFields', () => {
+    const memory = memories.find(item => item.experience?.id === 'M8');
+    expect(memory.media.hiddenMemoryId).toBe('mem_1998_humidity');
+    expect(memory.media.photos.map(photo => photo.src)).toEqual([
+      './assets/memories/m8/cover-orbit.svg',
+      './assets/memories/m8/letter-window.svg',
+      './assets/memories/m8/hidden-summer.svg',
+      './assets/memories/m8/lens-reflection.svg',
+      './assets/memories/m8/epilogue-dawn.svg'
+    ]);
+    memory.media.photos.forEach(photo => {
+      expect(photo).toHaveProperty('role');
+      expect(photo).toHaveProperty('alt');
+      expect(photo).toHaveProperty('caption');
+    });
+  });
+
+  it('test_m8HiddenMemoryReferenceIsValid', () => {
+    const memory = memories.find(item => item.id === 'mem_1995_shadow');
+    const hidden = memories.find(item => item.id === memory.media.hiddenMemoryId);
+
+    expect(hidden).toBeDefined();
+    expect(hidden.meta.isHidden).toBe(true);
+    expect(hidden.meta.chapterIndex).toBe(memory.meta.chapterIndex);
+  });
 });
