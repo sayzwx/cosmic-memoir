@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin>
   <link href="https://fonts.googleapis.cn/css2?family=Noto+Serif+SC:wght@200;300;400;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <script src="./js/auth-guard.js"></script>
+  <link rel="stylesheet" href="./css/universe-ui.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -115,7 +116,11 @@
   </style>
 </head>
 <body>
-  <canvas id="main-canvas"></canvas>
+  <canvas
+    id="main-canvas"
+    tabindex="0"
+    aria-label="暗物质深空场景。拖动旋转视角，滚轮缩放；W S 前后移动，A D 环绕，Enter 聚焦记忆，Space 扫描，Escape 返回总览。"
+  ></canvas>
 
   <div id="ui-overlay">
     <div id="chapter-title" class="absolute top-6 left-6 md:top-8 md:left-8">
@@ -147,6 +152,20 @@
       </button>
     </div>
   </div>
+
+  <section id="m8-experience" class="m8-spatial" aria-hidden="true" inert aria-label="M8 深空空间记忆">
+    <span class="m8-spatial__reticle" aria-hidden="true"></span>
+    <div class="m8-spatial__caption">
+      <p id="m8-entity-index" class="m8-spatial__index">M8 · 0 / 5</p>
+      <h2 id="m8-entity-title" class="m8-spatial__title">深空记忆</h2>
+      <p id="m8-entity-body" class="m8-spatial__body"></p>
+      <p id="m8-status" class="m8-spatial__status" role="status" aria-live="polite">移动视角，将记忆置于准星中央。</p>
+    </div>
+    <div id="m8-progress" class="m8-spatial__progress" aria-hidden="true"></div>
+    <button id="m8-scan-hint" class="m8-spatial__hint" type="button" disabled>SPACE · 扫描记忆</button>
+    <button id="m8-return-overview" class="m8-spatial__return" type="button">返回记忆总览</button>
+    <ol id="m8-entity-list" class="m8-spatial__sr-list" aria-label="空间记忆实体"></ol>
+  </section>
 
   <div id="loading-screen">
     <div class="text-center">
