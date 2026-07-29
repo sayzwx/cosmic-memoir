@@ -862,17 +862,15 @@ html, body {
 
 .galaxy-river-canvas {
   position: absolute !important;
-  top: -14px;
-  left: -24%;
-  width: 148%;
-  height: 215px;
+  top: -88px;
+  left: -38%;
+  width: 176%;
+  height: 365px;
   pointer-events: none;
   z-index: 0 !important;
   opacity: 1;
-  filter: saturate(1.42) contrast(1.16);
-  transform: rotate(-2deg);
-  mask-image: radial-gradient(ellipse at center, #000 26%, rgba(0, 0, 0, 0.96) 58%, transparent 86%);
-  -webkit-mask-image: radial-gradient(ellipse at center, #000 26%, rgba(0, 0, 0, 0.96) 58%, transparent 86%);
+  filter: saturate(1.46) contrast(1.18);
+  transform: rotate(-4deg);
 }
 
 .galaxy-form-body > .galaxy-axis,
@@ -901,9 +899,10 @@ html, body {
 
 @media (max-width: 600px) {
   .galaxy-river-canvas {
-    left: -14%;
-    width: 128%;
-    height: 205px;
+    top: -58px;
+    left: -32%;
+    width: 164%;
+    height: 310px;
   }
 }
 
