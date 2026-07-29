@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { sharedState } from '../store/sharedState'
 import config from '../config.json'
+import { GalaxyRiver } from './GalaxyRiver'
 
 const AGGREGATION_PARTICLES = Array.from({ length: 56 }, (_, index) => {
   const angle = (index / 56) * Math.PI * 2 + (index % 5) * 0.19
@@ -183,23 +184,29 @@ export function LoginOverlay({ cardRef, isAwakened, onAwaken }) {
           ))}
         </div>
 
-        <div className="galaxy-form-body" aria-label="Memory input constellation">
-          <div className="galaxy-axis" />
-          <label className={`galaxy-field ${activeField === 'identity' ? 'active' : ''}`}>
-            <span className="field-star blue" />
-            <span className="field-label">{config.login.identityPlaceholder}</span>
-            <input
-              ref={identityInputRef}
-              type="text"
-              value={username}
-              onChange={handleIdentityChange}
-              onFocus={handleIdentityFocus}
-              onBlur={handleBlur}
-              autoComplete="username"
-              spellCheck={false}
-              disabled={isLocked || isTransitioning}
-            />
-            <span className="field-dust" />
+        <div className="galaxy-form-body star-river-form" aria-label="Memory input constellation">
+          <GalaxyRiver />
+          <div className="galaxy-axis"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+          <label className={`galaxy-field star-station identity-station ${activeField === 'identity' ? 'active' : ''}`}>
+            <span className="station-route" aria-hidden="true"><i /><b /><em /><em /><em /></span>
+            <span className="station-copy">
+              <span className="field-label">{config.login.identityPlaceholder}</span>
+              <span className="station-coordinate">SECTOR 01 / ORIGIN</span>
+            </span>
+            <span className="station-input">
+              <input
+                ref={identityInputRef}
+                type="text"
+                value={username}
+                onChange={handleIdentityChange}
+                onFocus={handleIdentityFocus}
+                onBlur={handleBlur}
+                autoComplete="username"
+                spellCheck={false}
+                disabled={isLocked || isTransitioning}
+              />
+              <span className="input-signal" aria-hidden="true" />
+            </span>
             <div className="floating-chars-container">
               {floatingChars.filter(c => c.field === 'identity').map(c => (
                 <span key={c.id} className={`floating-char ${c.field}-char`}>{c.char}</span>
@@ -207,21 +214,26 @@ export function LoginOverlay({ cardRef, isAwakened, onAwaken }) {
             </div>
           </label>
 
-          <label className={`galaxy-field ${activeField === 'key' ? 'active' : ''}`}>
-            <span className="field-star gold" />
-            <span className="field-label">{config.login.keyPlaceholder}</span>
-            <input
-              ref={keyInputRef}
-              type="password"
-              value={password}
-              onChange={handleKeyChange}
-              onFocus={handleKeyFocus}
-              onBlur={handleBlur}
-              autoComplete="current-password"
-              spellCheck={false}
-              disabled={isLocked || isTransitioning}
-            />
-            <span className="field-dust warm" />
+          <label className={`galaxy-field star-station key-station ${activeField === 'key' ? 'active' : ''}`}>
+            <span className="station-route" aria-hidden="true"><i /><b /><em /><em /><em /></span>
+            <span className="station-copy">
+              <span className="field-label">{config.login.keyPlaceholder}</span>
+              <span className="station-coordinate">SECTOR 02 / VEIL</span>
+            </span>
+            <span className="station-input">
+              <input
+                ref={keyInputRef}
+                type="password"
+                value={password}
+                onChange={handleKeyChange}
+                onFocus={handleKeyFocus}
+                onBlur={handleBlur}
+                autoComplete="current-password"
+                spellCheck={false}
+                disabled={isLocked || isTransitioning}
+              />
+              <span className="input-signal" aria-hidden="true" />
+            </span>
             <div className="golden-dots-container" aria-hidden="true">
               {passwordDots.map((_, i) => (
                 <span key={i} className="golden-dot" style={{ '--orbit': `${i * 30}deg`, animationDelay: `${i * 0.12}s` }} />
