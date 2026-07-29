@@ -50,7 +50,7 @@ export function CameraRig({ loginCardRef }) {
       if (isDragging.current) {
         const dx = e.clientX - lastPointer.current.x
         const dy = e.clientY - lastPointer.current.y
-        velocity.current.theta -= dx * 0.0015
+        velocity.current.theta += dx * 0.0015
         velocity.current.phi -= dy * 0.0015
         lastPointer.current = { x: e.clientX, y: e.clientY }
       }
