@@ -869,7 +869,7 @@ html, body {
   pointer-events: none;
   z-index: 0 !important;
   opacity: 1;
-  filter: saturate(1.46) contrast(1.18);
+  filter: saturate(1.32) contrast(1.12);
   transform: rotate(-4deg);
 }
 

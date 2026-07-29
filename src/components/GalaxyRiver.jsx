@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 
-const STAR_COUNT = 1450
+const STAR_COUNT = 720
 const ARM_COUNT = 4
+const FRAME_INTERVAL_MS = 1000 / 30
 
 function createStars() {
   let seed = 7319
@@ -39,6 +40,7 @@ export function GalaxyRiver() {
     let width = 0
     let height = 0
     let pixelRatio = 1
+    let lastRenderTime = -Infinity
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect()
@@ -51,6 +53,11 @@ export function GalaxyRiver() {
     }
 
     const draw = (milliseconds = 0) => {
+      if (!reducedMotion && milliseconds - lastRenderTime < FRAME_INTERVAL_MS) {
+        frame = requestAnimationFrame(draw)
+        return
+      }
+      lastRenderTime = milliseconds
       const time = milliseconds * 0.001
       const centerX = width * 0.5
       const centerY = height * 0.5
@@ -102,11 +109,11 @@ export function GalaxyRiver() {
       context.translate(centerX, centerY)
       context.rotate(-0.12)
       context.scale(1, 0.56)
-      context.filter = 'blur(7px)'
+      context.filter = 'blur(4px)'
       for (let arm = 0; arm < ARM_COUNT; arm += 1) {
         context.beginPath()
-        for (let step = 0; step <= 100; step += 1) {
-          const radius = (step / 100) * majorRadius * 0.91
+        for (let step = 0; step <= 48; step += 1) {
+          const radius = (step / 48) * majorRadius * 0.91
           const angle = arm * (Math.PI * 2 / ARM_COUNT) + radius * 0.011 + time * 0.018
           const x = Math.cos(angle) * radius
           const y = Math.sin(angle) * radius
