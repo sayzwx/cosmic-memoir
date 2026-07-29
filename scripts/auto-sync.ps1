@@ -9,6 +9,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & git -C $repoRoot pull --rebase origin main
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+# Retry any already-committed local work before looking for new changes.
+& git -C $repoRoot push origin main
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 $changes = & git -C $repoRoot status --porcelain
 if ([string]::IsNullOrWhiteSpace($changes)) { exit 0 }
 
