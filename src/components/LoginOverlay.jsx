@@ -194,6 +194,9 @@ export function LoginOverlay({ cardRef, isAwakened, onAwaken }) {
               <span className="station-coordinate">SECTOR 01 / ORIGIN</span>
             </span>
             <span className="station-input">
+              <span className="nebula-glass" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></span>
+              <span className="energy-orbit" aria-hidden="true"><i /><b /></span>
+              <span className="focus-stardust" aria-hidden="true"><i /><i /><i /><i /><i /><i /></span>
               <input
                 ref={identityInputRef}
                 type="text"
@@ -221,6 +224,9 @@ export function LoginOverlay({ cardRef, isAwakened, onAwaken }) {
               <span className="station-coordinate">SECTOR 02 / VEIL</span>
             </span>
             <span className="station-input">
+              <span className="nebula-glass" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></span>
+              <span className="energy-orbit" aria-hidden="true"><i /><b /></span>
+              <span className="focus-stardust" aria-hidden="true"><i /><i /><i /><i /><i /><i /></span>
               <input
                 ref={keyInputRef}
                 type="password"

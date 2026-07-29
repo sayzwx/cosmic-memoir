@@ -1047,18 +1047,126 @@ html, body {
 .station-input {
   position: relative;
   z-index: 2;
+  min-height: 42px;
+  isolation: isolate;
 }
+
+.nebula-glass,
+.energy-orbit,
+.focus-stardust {
+  position: absolute;
+  pointer-events: none;
+}
+
+.nebula-glass {
+  inset: 0;
+  overflow: hidden;
+  border-radius: 18px 7px 18px 7px;
+  background:
+    radial-gradient(ellipse at 28% 24%, rgba(80, 169, 255, 0.21), transparent 43%),
+    radial-gradient(ellipse at 77% 77%, rgba(156, 91, 255, 0.17), transparent 48%),
+    radial-gradient(ellipse at 50% 50%, rgba(16, 37, 80, 0.33), rgba(4, 9, 28, 0.18) 74%);
+  border: 1px solid transparent;
+  box-shadow: inset 0 0 22px rgba(102, 163, 255, 0.15);
+  z-index: -1;
+}
+
+.nebula-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(115deg, #00bfff, rgba(109, 89, 238, 0.82) 42%, rgba(202, 151, 255, 0.72) 68%, #00bfff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: .63;
+}
+
+.nebula-glass::after {
+  content: '';
+  position: absolute;
+  inset: -40% -24%;
+  background: linear-gradient(105deg, transparent 39%, rgba(199, 237, 255, 0.25) 49%, transparent 59%);
+  transform: translateX(-68%);
+  animation: glassSweep 10s ease-in-out infinite;
+}
+
+.nebula-glass i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: rgba(224, 246, 255, .86);
+  box-shadow: 0 0 5px rgba(86, 191, 255, .92);
+  animation: innerStar 3.8s ease-in-out infinite;
+}
+
+.nebula-glass i:nth-child(1) { left: 9%; top: 34%; }.nebula-glass i:nth-child(2) { left: 20%; top: 73%; animation-delay: -.8s; }.nebula-glass i:nth-child(3) { left: 35%; top: 18%; animation-delay: -1.4s; }.nebula-glass i:nth-child(4) { left: 48%; top: 65%; animation-delay: -2.2s; }.nebula-glass i:nth-child(5) { left: 63%; top: 31%; animation-delay: -3s; }.nebula-glass i:nth-child(6) { left: 74%; top: 76%; animation-delay: -1.7s; }.nebula-glass i:nth-child(7) { left: 84%; top: 25%; animation-delay: -.3s; }.nebula-glass i:nth-child(8) { left: 92%; top: 60%; animation-delay: -2.7s; }
+
+.energy-orbit {
+  inset: -7px -12px;
+  overflow: hidden;
+  border-radius: 50%;
+  opacity: .58;
+  z-index: -2;
+}
+
+.energy-orbit::before {
+  content: '';
+  position: absolute;
+  inset: 26% -3%;
+  border-top: 1px solid rgba(99, 194, 255, .55);
+  border-radius: 50%;
+  transform: rotate(-7deg) scaleY(.44);
+  box-shadow: 0 -2px 8px rgba(100, 169, 255, .34);
+}
+
+.energy-orbit i,
+.energy-orbit b {
+  position: absolute;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e8f8ff;
+  box-shadow: 0 0 7px #6fc8ff, 0 0 14px rgba(88, 161, 255, .72);
+  animation: orbitSignal 5.5s linear infinite;
+}
+
+.energy-orbit b { width: 3px; height: 3px; background: #d8b8ff; box-shadow: 0 0 7px #b177ff; animation-delay: -2.75s; }
+
+.focus-stardust {
+  inset: -22px -16px;
+  opacity: 0;
+  z-index: 3;
+  transition: opacity .35s ease;
+}
+
+.focus-stardust i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #e7f8ff;
+  box-shadow: 0 0 7px #6bc5ff, 0 0 14px rgba(121, 174, 255, .74);
+}
+
+.focus-stardust i:nth-child(1) { --x: -62px; --y: -22px; }.focus-stardust i:nth-child(2) { --x: 48px; --y: -28px; }.focus-stardust i:nth-child(3) { --x: 76px; --y: 13px; }.focus-stardust i:nth-child(4) { --x: -52px; --y: 27px; }.focus-stardust i:nth-child(5) { --x: 6px; --y: -34px; }.focus-stardust i:nth-child(6) { --x: 18px; --y: 31px; }
 
 .star-station input,
 .galaxy-form-body .star-station input {
   width: 100%;
   min-height: 38px;
   padding: 8px 12px 8px 14px;
-  border: 1px solid rgba(159, 213, 255, 0.27);
-  border-radius: 999px;
-  background: linear-gradient(100deg, rgba(3, 11, 31, 0.78), rgba(13, 31, 66, 0.44) 72%, rgba(102, 143, 255, 0.17));
-  box-shadow: inset 0 0 22px rgba(98, 163, 255, 0.13), 0 6px 24px -13px rgba(71, 155, 255, 0.82), 0 0 0 1px rgba(193, 225, 255, 0.04);
-  color: #e5f3ff;
+  border: 0;
+  border-radius: 18px 7px 18px 7px;
+  background: rgba(5, 13, 35, 0.17);
+  box-shadow: 0 0 10px rgba(79, 139, 255, 0.2), 0 0 23px rgba(106, 90, 205, 0.16);
+  color: #e0f7fa;
   font-size: 12px;
   letter-spacing: 0.12em;
   transition: border-color .4s ease, background .4s ease, box-shadow .4s ease, transform .4s ease;
@@ -1066,9 +1174,10 @@ html, body {
 
 .key-station input,
 .galaxy-form-body .key-station input {
-  border-color: rgba(255, 208, 139, 0.24);
-  background: linear-gradient(100deg, rgba(23, 12, 31, 0.76), rgba(48, 29, 55, 0.39) 72%, rgba(255, 157, 70, 0.14));
+  background: rgba(20, 11, 35, 0.18);
 }
+
+.star-station input::placeholder { color: rgba(224, 247, 250, .64); text-shadow: 0 0 4px #00bfff; }
 
 .input-signal {
   position: absolute;
@@ -1089,11 +1198,18 @@ html, body {
 .star-station.active .station-route::before { animation-duration: 1.5s; }
 .star-station.active .station-input input,
 .galaxy-form-body .star-station.active input {
-  border-color: rgba(192, 229, 255, 0.58);
-  background: linear-gradient(100deg, rgba(8, 25, 58, 0.82), rgba(22, 48, 88, 0.34) 72%, rgba(125, 180, 255, 0.17));
-  box-shadow: inset 0 0 20px rgba(103, 179, 255, 0.12), 0 0 16px -4px rgba(112, 189, 255, 0.56);
+  background: rgba(8, 25, 58, 0.22);
+  box-shadow: 0 0 12px rgba(0, 191, 255, .55), 0 0 27px rgba(106, 90, 205, .5), inset 0 0 22px rgba(103, 179, 255, 0.1);
   transform: translateY(-1px);
 }
+
+.star-station.active .nebula-glass::before { opacity: 1; filter: brightness(1.45); }
+.star-station.active .nebula-glass { box-shadow: inset 0 0 28px rgba(90, 176, 255, .23), 0 0 18px rgba(0, 191, 255, .25); }
+.star-station.active .energy-orbit { opacity: 1; }
+.star-station.active .focus-stardust { opacity: 1; }
+.star-station.active .focus-stardust i { animation: focusStarBurst 1.35s ease-out infinite; }
+.key-station.active .nebula-glass::before { background: linear-gradient(115deg, #a773ff, rgba(124, 103, 255, .9) 44%, rgba(255, 185, 121, .75), #a773ff); }
+.key-station.active .focus-stardust i { background: #fff0d5; box-shadow: 0 0 7px #d19bff, 0 0 14px rgba(255, 177, 110, .7); }
 
 .star-station.active .input-signal { opacity: 1; transform: translateY(-50%) scale(1.7); animation: signalPulse 1.25s ease-in-out infinite; }
 .star-station:not(.active) .input-signal { opacity: 0.48; }
@@ -1109,6 +1225,10 @@ html, body {
 @keyframes stationOrbit { to { transform: translateY(-50%) rotate(360deg) scale(1.3); } }
 @keyframes photonRoute { 0% { left: 1%; opacity: 0; transform: translateY(-50%) scale(.4); } 14% { opacity: 1; } 76% { opacity: .9; } 100% { left: 92%; opacity: 0; transform: translateY(-50%) scale(1.2); } }
 @keyframes signalPulse { 0%, 100% { box-shadow: 0 0 7px rgba(126, 201, 255, .75); } 50% { box-shadow: 0 0 15px rgba(174, 226, 255, 1), 0 0 28px rgba(91, 162, 255, .7); } }
+@keyframes glassSweep { 0%, 58%, 100% { transform: translateX(-68%); } 80% { transform: translateX(68%); } }
+@keyframes innerStar { 0%, 100% { opacity: .2; transform: scale(.65); } 50% { opacity: .92; transform: scale(1.24); } }
+@keyframes orbitSignal { 0% { left: 4%; transform: translateY(-50%); } 25% { left: 50%; top: 23%; } 50% { left: 94%; transform: translateY(-50%); } 75% { left: 50%; top: 77%; } 100% { left: 4%; transform: translateY(-50%); } }
+@keyframes focusStarBurst { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.25); } 18% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.25); } }
 
 @media (max-width: 600px) {
   .star-station { grid-template-columns: 27px 88px minmax(0, 1fr); min-height: 69px; }
@@ -1117,5 +1237,5 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .station-route::before, .station-route::after, .station-route i, .star-station.active .input-signal { animation: none; }
+  .station-route::before, .station-route::after, .station-route i, .star-station.active .input-signal, .nebula-glass::after, .nebula-glass i, .energy-orbit i, .energy-orbit b, .star-station.active .focus-stardust i { animation: none; }
 }
