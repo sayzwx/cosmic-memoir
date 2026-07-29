@@ -17,8 +17,8 @@ export function GalaxyParticles({ count = 30000 }) {
     const branches = 4
     const galaxyRadius = 70
     const spin = -1.3
-    const randomnessPower = 3.2
-    const coreFactor = 0.12
+    const randomnessPower = 2.1
+    const coreFactor = 0.28
 
     const tempColor = new THREE.Color()
 
@@ -29,19 +29,24 @@ export function GalaxyParticles({ count = 30000 }) {
       let r, branchAngle, spinAngle, rx, ry, rz
 
       if (isCore) {
-        r = Math.pow(Math.random(), 2.5) * galaxyRadius * 0.12
-        branchAngle = Math.random() * Math.PI * 2
-        spinAngle = 0
-        rx = (Math.random() - 0.5) * r * 0.4
-        ry = (Math.random() - 0.5) * r * 0.4
-        rz = (Math.random() - 0.5) * r * 0.4
+        // The arms retain their angular memory as material spirals inward.
+        // A small amount of spread keeps the disk turbulent rather than ideal.
+        r = 3.35 + Math.pow(Math.random(), 1.65) * 20.5
+        branchAngle = ((i % branches) / branches) * Math.PI * 2
+        spinAngle = r * spin * 0.115
+        const innerWidth = 0.35 + (r / 24) * 1.4
+        rx = (Math.random() - 0.5) * innerWidth
+        ry = (Math.random() - 0.5) * (0.08 + r * 0.018)
+        rz = (Math.random() - 0.5) * innerWidth
       } else {
-        r = Math.pow(Math.random(), 0.55) * galaxyRadius
+        r = Math.pow(Math.random(), 0.68) * galaxyRadius
         branchAngle = ((i % branches) / branches) * Math.PI * 2
         spinAngle = r * spin * 0.045
-        rx = Math.pow(Math.random(), randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * 2.8
-        ry = Math.pow(Math.random(), randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * 0.9
-        rz = Math.pow(Math.random(), randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * 2.8
+        // Most stars remain in a narrow arm; a minority forms diffuse stellar haze.
+        const armWidth = Math.random() < 0.78 ? 1.35 : 4.8
+        rx = Math.pow(Math.random(), randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * armWidth
+        ry = Math.pow(Math.random(), randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * (armWidth * 0.3)
+        rz = Math.pow(Math.random(), randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * armWidth
       }
 
       positions[i3] = Math.cos(branchAngle + spinAngle) * r + rx
@@ -64,14 +69,20 @@ export function GalaxyParticles({ count = 30000 }) {
         tempColor.setRGB(1.0, 0.48, 0.35) // M-class red dwarf
       }
 
-      const brightness = (isCore ? 1.3 : 0.55 + Math.random() * 0.45) *
+      const armKnot = Math.pow(Math.random(), 4)
+      const innerHeat = isCore ? Math.pow(1.0 - Math.min(r / 24, 1), 2.2) : 0
+      const brightness = (isCore ? 1.15 + innerHeat * 1.35 : 0.45 + Math.random() * 0.42 + armKnot * 0.7) *
         (1.0 - (r / galaxyRadius) * 0.35)
 
+      const hotCore = new THREE.Color(1.0, 0.78, 0.35)
+      tempColor.lerp(hotCore, innerHeat * 0.78)
       colors[i3] = tempColor.r * brightness
       colors[i3 + 1] = tempColor.g * brightness
       colors[i3 + 2] = tempColor.b * brightness
 
-      sizes[i] = isCore ? Math.random() * 3 + 1.2 : Math.random() * 2.2 + 0.6
+      sizes[i] = isCore
+        ? Math.random() * 2.7 + 0.95 + innerHeat * 2.4
+        : Math.random() * 1.85 + 0.48 + armKnot * 1.5
       offsets[i] = Math.random() * Math.PI * 2
       randomness[i3] = Math.random()
       randomness[i3 + 1] = Math.random()

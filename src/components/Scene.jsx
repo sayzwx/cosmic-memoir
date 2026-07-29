@@ -8,6 +8,8 @@ import { CameraRig } from './CameraRig'
 import { PhotonSystem } from './PhotonSystem'
 import { Effects } from './Effects'
 import { EventHorizonTunnel } from './EventHorizonTunnel'
+import { DistantCelestials } from './DistantCelestials'
+import { NebulaStreaks } from './NebulaStreaks'
 import { useResponsive } from '../hooks/useResponsive'
 
 export function Scene({ loginCardRef, isLoginAwakened, onLoginAwaken }) {
@@ -39,9 +41,11 @@ export function Scene({ loginCardRef, isLoginAwakened, onLoginAwaken }) {
       }}
     >
       <NebulaBackground />
+      <NebulaStreaks count={100} />
       <CameraRig loginCardRef={loginCardRef} />
       <CompanionStars hidden={isLoginAwakened} onActivate={onLoginAwaken} />
       <GalaxyParticles count={particleCount} />
+      <DistantCelestials />
       <BlackHole />
       <AccretionDisk />
       <PhotonSystem />
