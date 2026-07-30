@@ -22,8 +22,8 @@
     }
   },
   "scene": {
-    "particleCount": 30000,
-    "mobileParticleCount": 12000,
+    "particleCount": 45000,
+    "mobileParticleCount": 16000,
     "breathCycleSeconds": 4
   }
 }
