@@ -34,24 +34,33 @@
       if (window.location.search.indexOf('logout') !== -1) {
         sessionStorage.removeItem(TOKEN_KEY);
         sessionStorage.removeItem(LOGIN_TIME_KEY);
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(LOGIN_TIME_KEY);
         localStorage.removeItem(FAILED_KEY);
         localStorage.removeItem(LOCK_KEY);
         window.location.replace(window.location.pathname);
         return;
       }
 
-      var token = sessionStorage.getItem(TOKEN_KEY);
-      var loginTime = sessionStorage.getItem(LOGIN_TIME_KEY);
+      var token = sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+      var loginTime = sessionStorage.getItem(LOGIN_TIME_KEY) || localStorage.getItem(LOGIN_TIME_KEY);
 
       if (token && loginTime) {
         var elapsed = Date.now() - parseInt(loginTime, 10);
         if (elapsed < SESSION_TIMEOUT) {
+          sessionStorage.setItem(TOKEN_KEY, token);
+          sessionStorage.setItem(LOGIN_TIME_KEY, loginTime);
           window.location.replace('./universe.html');
+        } else {
+          sessionStorage.removeItem(TOKEN_KEY);
+          sessionStorage.removeItem(LOGIN_TIME_KEY);
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(LOGIN_TIME_KEY);
         }
       }
     })();
   </script>
-  <script type="module" crossorigin src="./assets/index-BEWVda8a.js"></script>
+  <script type="module" crossorigin src="./assets/index-BGHynaiA.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-CstZTXpl.css">
 </head>
 <body>

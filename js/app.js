@@ -18,7 +18,7 @@ const m8Title = byId('m8-entity-title');
 const m8Body = byId('m8-entity-body');
 const m8Status = byId('m8-status');
 const m8Progress = byId('m8-progress');
-const m8Hint = byId('m8-scan-hint');
+const m8Action = byId('m8-anchor-action');
 const m8List = byId('m8-entity-list');
 const m8Return = byId('m8-return-overview');
 
@@ -27,7 +27,7 @@ let focusedEntityId = null;
 let visitedEntityIds = new Set();
 let carrierStates = new Map();
 let m8CaptionTimer = null;
-let suppressScanClick = false;
+let completedMemory = null;
 
 const clamp01 = value => Math.max(0, Math.min(1, Number.isFinite(Number(value)) ? Number(value) : 0));
 
@@ -39,7 +39,7 @@ function setM8Status(text) {
 function setCaptionFocus(focused) {
   m8?.classList.toggle('has-focus', Boolean(focused));
   clearTimeout(m8CaptionTimer);
-  if (focused) m8CaptionTimer = setTimeout(() => m8?.classList.remove('has-focus'), 5200);
+  if (focused) m8CaptionTimer = setTimeout(() => m8?.classList.remove('has-focus'), 5000);
 }
 
 function mergeCarrierState(entityId, update = {}) {
@@ -48,14 +48,11 @@ function mergeCarrierState(entityId, update = {}) {
   const state = String(update.state || previous.state || '').toUpperCase();
   const discoveryProgress = clamp01(update.discoveryProgress ?? update.progress ?? previous.discoveryProgress);
   const locked = update.locked ?? (update.state !== undefined ? state === 'LOCKED' : previous.locked);
-  const carrier = update.carrier ?? previous.carrier;
   const revealed = Boolean(update.revealed ?? previous.revealed) || ['REVEALED', 'CAPTURED'].includes(state);
   const canCapture = state === 'CAPTURED' ? false : Boolean(update.canCapture ??
     (update.state !== undefined ? revealed : (previous.canCapture ?? revealed)));
-  const canScan = Boolean(state !== 'LOCKED' && state !== 'CAPTURED' && !canCapture &&
-    (update.canScan ?? (update.state !== undefined ? carrier === 'cosmicWeb' : (previous.canScan ?? carrier === 'cosmicWeb'))));
   carrierStates.set(entityId, {
-    ...previous, ...update, state, discoveryProgress, locked, carrier, canScan, canCapture
+    ...previous, ...update, state, discoveryProgress, locked, canScan: false, canCapture
   });
 }
 
@@ -113,7 +110,7 @@ function showLoadingError(message) {
 
 function getM8Entities() {
   if (!activeMemory) return [];
-  const photos = activeMemory.media?.photos || [];
+  const photos = activeMemory.media?.crystalNodes ?? activeMemory.media?.photos ?? [];
   const byEntityId = new Map(photos.map(entity => [entity.id, entity]));
   return activeMemory.experience.entityOrder.map(id => byEntityId.get(id)).filter(Boolean);
 }
@@ -135,41 +132,33 @@ function renderM8Progress() {
 function renderM8Focus() {
   const entities = getM8Entities();
   const entity = entities.find(item => item.id === focusedEntityId) || null;
-  const current = entity ? entities.indexOf(entity) + 1 : 0;
-  if (m8Index) m8Index.textContent = `M8 · ${current} / ${entities.length}`;
-  if (m8Title) m8Title.textContent = entity?.title || '深空记忆';
-  if (m8Body) m8Body.textContent = entity?.body || '移动视角，在不可见的质量中寻找记忆。';
+  if (m8Index) m8Index.textContent = `晶体 ${visitedEntityIds.size} / ${entities.length}`;
+  if (m8Title) m8Title.textContent = completedMemory?.title || entity?.title || '暗物质宇宙网';
+  if (m8Body) m8Body.textContent = completedMemory?.body || entity?.unfoldText || entity?.body || '移动视角，在不可见的质量中寻找记忆。';
   const carrier = entity ? carrierStates.get(entity.id) || {} : {};
   const state = String(carrier.state || '').toUpperCase();
   const visited = Boolean(entity && visitedEntityIds.has(entity.id));
   const revealed = Boolean(carrier.revealed) || ['REVEALED', 'CAPTURED'].includes(state);
-  const canCapture = Boolean(entity && !visited && (carrier.canCapture ?? revealed));
-  const isCosmicWeb = (carrier.carrier || entity?.carrier) === 'cosmicWeb';
-  const canScan = Boolean(entity && !visited && !canCapture && (carrier.canScan ??
-    (isCosmicWeb && carrier.locked !== true && state !== 'LOCKED')));
-  if (m8Hint) {
-    const desktop = m8Hint.querySelector('.m8-spatial__desktop-prompt');
-    const mobile = m8Hint.querySelector('.m8-spatial__mobile-prompt');
-    if (desktop) desktop.textContent = canCapture ? 'CAPTURE MEMORY' : (canScan ? 'SPACE · SCAN' : '移动视角 · 寻找记忆');
-    if (mobile) mobile.textContent = canCapture ? 'CAPTURE' : (canScan ? 'HOLD TO SCAN' : '移动视角 · 寻找记忆');
-    m8Hint.disabled = !canScan && !canCapture;
-    m8Hint.dataset.action = canCapture ? 'activate' : (canScan ? 'scan' : '');
-    m8Hint.setAttribute('aria-label', canCapture ? 'Capture memory' : (canScan ? 'Scan memory' : 'No memory action available'));
+  const canCapture = Boolean(entity && !visited && carrier.locked !== true && (carrier.canCapture ?? revealed));
+  if (m8Action) {
+    m8Action.disabled = !canCapture;
+    m8Action.dataset.action = canCapture ? 'activate' : '';
+    m8Action.textContent = canCapture ? '锚定记忆' : '选择一枚晶体';
+    m8Action.setAttribute('aria-label', canCapture ? `锚定记忆：${entity.title}` : '选择一枚可锚定的记忆晶体');
   }
   const progress = clamp01(carrier.discoveryProgress);
   const aimed = Boolean(carrier.aimed ?? (entity && !carrier.locked));
-  m8?.style.setProperty('--m8-accent', carrier.accent || entity?.accent || '#86bfe5');
+  m8?.style.setProperty('--m8-accent', carrier.energyColor || entity?.energyColor || carrier.accent || entity?.accent || '#86bfe5');
   m8?.style.setProperty('--m8-discovery', String(progress));
-  m8?.style.setProperty('--m8-discovery-angle', `${progress * 360}deg`);
   m8?.classList.toggle('is-aimed', aimed && Boolean(entity));
   m8?.classList.toggle('is-revealed', revealed);
-  m8?.classList.toggle('can-scan', canScan);
   m8?.classList.toggle('can-capture', canCapture);
   renderM8Progress();
 }
 
 function resetM8(memory) {
   activeMemory = memory;
+  completedMemory = null;
   focusedEntityId = null;
   visitedEntityIds = new Set();
   carrierStates = new Map();
@@ -182,12 +171,11 @@ function resetM8(memory) {
       return item;
     }));
   }
-  const initiallyAvailable = entities.find(entity => (entity.unlockAfter || []).length === 0)?.id;
   entities.forEach(entity => mergeCarrierState(entity.id, {
-    state: entity.id === initiallyAvailable ? 'AVAILABLE' : 'LOCKED',
-    locked: entity.id !== initiallyAvailable,
-    carrier: entity.carrier,
-    accent: entity.accent
+    state: 'AVAILABLE',
+    locked: false,
+    crystalType: entity.crystalType,
+    accent: entity.energyColor || entity.accent
   }));
   setM8Status('移动视角，将记忆置于准星中央。');
   renderM8Focus();
@@ -195,7 +183,7 @@ function resetM8(memory) {
 
 function setM8Active(memory) {
   const isM8 = memory?.experience?.id === 'M8' &&
-    memory.experience.variant === 'deepSpaceSpatialMemory' && memory.experience.version === 2;
+    memory.experience.variant === 'darkMatterCosmicWeb' && memory.experience.version === 3;
   document.body.classList.toggle('m8-active', isM8);
   m8?.classList.toggle('is-active', isM8);
   m8?.setAttribute('aria-hidden', String(!isM8));
@@ -357,48 +345,28 @@ window.addEventListener('hiddenMemoryUnlocked', async event => {
   if (!matchesActiveMemory(detail)) return;
   const hidden = await app.data.getHiddenMemory(activeMemory);
   if (!hidden || !activeMemory) return;
-  if (m8Title) m8Title.textContent = hidden.meta?.title || '隐藏记忆';
-  if (m8Body) m8Body.textContent = hidden.narrative?.bodyText || hidden.narrative?.epilogueText || '';
+  completedMemory = {
+    title: hidden.meta?.title || '隐藏记忆',
+    body: hidden.narrative?.bodyText || hidden.narrative?.epilogueText || ''
+  };
   setM8Status('不可见的质量已经留下了可以阅读的证据。');
+  setCaptionFocus(true);
+  renderM8Focus();
 });
 
 function requestM8ButtonAction() {
-  if (!activeMemory || !focusedEntityId || visitedEntityIds.has(focusedEntityId) || m8Hint?.disabled) return false;
-  const action = m8Hint?.dataset.action;
-  if (action !== 'scan' && action !== 'activate') return false;
+  if (!activeMemory || !focusedEntityId || visitedEntityIds.has(focusedEntityId) || m8Action?.disabled) return false;
+  const action = 'activate';
   const memoryId = activeMemory.id;
   const entityId = focusedEntityId;
   window.dispatchEvent(new CustomEvent('spatialMemoryScanRequested', {
     detail: { action, trigger: 'button', memoryId, entityId }
   }));
-  if (action === 'scan') setM8Status('正在扫描焦点中的记忆…');
+  setM8Status('正在锚定焦点中的记忆…');
   return true;
 }
 
-// The current renderer's legacy listener treats every scan-request event as a
-// scan. Route the explicit activate action before that listener is reached.
-window.addEventListener('spatialMemoryScanRequested', event => {
-  const detail = event.detail || {};
-  if (detail.action !== 'activate' || detail.trigger !== 'button' || !matchesActiveMemory(detail)) return;
-  event.stopImmediatePropagation();
-  app.router.currentScene?.onKeyDown?.('Enter');
-});
-
-m8Hint?.addEventListener('pointerdown', event => {
-  if (m8Hint.dataset.action !== 'scan') return;
-  suppressScanClick = true;
-  setTimeout(() => { suppressScanClick = false; }, 800);
-  event.preventDefault();
-  requestM8ButtonAction();
-});
-
-m8Hint?.addEventListener('click', () => {
-  if (suppressScanClick) {
-    suppressScanClick = false;
-    return;
-  }
-  requestM8ButtonAction();
-});
+m8Action?.addEventListener('click', requestM8ButtonAction);
 
 m8Return?.addEventListener('click', () => {
   const request = new CustomEvent('spatialMemoryReturnOverview', {
@@ -434,8 +402,10 @@ document.addEventListener('keydown', event => {
   if (isInteractive) return;
   if (event.key === ' ' && activeMemory) {
     event.preventDefault();
-    const handled = app.router.currentScene?.onKeyDown?.(event.key);
-    if (!handled) setM8Status(focusedEntityId ? '当前记忆无法扫描。' : '准星内没有可扫描的记忆。');
+    window.dispatchEvent(new CustomEvent('spatialMemoryScanRequested', {
+      detail: { action: 'scan', trigger: 'keyboard', memoryId: activeMemory.id }
+    }));
+    setM8Status('正在扫描整个暗物质宇宙网…');
   } else if (event.key === ' ') {
     event.preventDefault();
     app.nextMemory();

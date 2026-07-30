@@ -84,25 +84,6 @@
       50% { opacity: var(--max-opacity, 0.8); transform: scale(1); }
       75% { opacity: 0.2; }
     }
-    .loading-dust {
-      position: absolute;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(100,140,255,0.15) 0%, transparent 70%);
-      pointer-events: none;
-      width: var(--size);
-      height: var(--size);
-      left: var(--x);
-      top: var(--y);
-      animation: loadingDrift calc(var(--dur) * 2) ease-in-out infinite;
-      animation-delay: var(--delay);
-      opacity: 0;
-    }
-    @keyframes loadingDrift {
-      0%, 100% { opacity: 0; transform: translate(0, 0); }
-      25% { opacity: 0.6; }
-      50% { opacity: 0.8; transform: translate(calc(var(--dx) * 1px), calc(var(--dy) * 1px)); }
-      75% { opacity: 0.3; }
-    }
     #loading-content {
       position: relative;
       z-index: 1;
@@ -169,7 +150,7 @@
   <canvas
     id="main-canvas"
     tabindex="0"
-    aria-label="暗物质深空场景。拖动旋转视角，滚轮缩放；W S 前后移动，A D 环绕，Enter 聚焦记忆，Space 扫描，Escape 返回总览。"
+    aria-label="暗物质宇宙网晶体场景。拖动旋转视角，滚轮缩放；W S 前后移动，A D 环绕，Enter 聚焦晶体，Space 扫描空间，Escape 返回总览。最终奇点需要深入缩放才能发现。"
   ></canvas>
 
   <div id="ui-overlay">
@@ -203,23 +184,22 @@
     </div>
   </div>
 
-  <section id="m8-experience" class="m8-spatial" aria-hidden="true" inert aria-label="M8 深空空间记忆">
+  <section id="m8-experience" class="m8-spatial" aria-hidden="true" inert aria-label="M8 暗物质宇宙网，包含五枚可探索记忆晶体">
     <span class="m8-spatial__reticle" aria-hidden="true"></span>
     <header class="m8-spatial__heading">
-      <p id="m8-entity-index" class="m8-spatial__index">M8 · 0 / 5</p>
-      <h2 id="m8-entity-title" class="m8-spatial__title">深空记忆</h2>
+      <h2 id="m8-entity-title" class="m8-spatial__title">暗物质宇宙网</h2>
     </header>
     <div class="m8-spatial__caption">
       <p id="m8-entity-body" class="m8-spatial__body"></p>
       <p id="m8-status" class="m8-spatial__status" role="status" aria-live="polite">移动视角，将记忆置于准星中央。</p>
     </div>
-    <div id="m8-progress" class="m8-spatial__progress" aria-hidden="true"></div>
-    <button id="m8-scan-hint" class="m8-spatial__hint" type="button" disabled>
-      <span class="m8-spatial__desktop-prompt">SPACE · SCAN</span>
-      <span class="m8-spatial__mobile-prompt">HOLD TO SCAN</span>
-    </button>
-    <button id="m8-return-overview" class="m8-spatial__return" type="button"><span aria-hidden="true">◯</span> 返回记忆总览</button>
-    <ol id="m8-entity-list" class="m8-spatial__sr-list" aria-label="空间记忆实体"></ol>
+    <div class="m8-spatial__count" aria-label="晶体探索进度">
+      <p id="m8-entity-index" class="m8-spatial__index">晶体 0 / 5</p>
+      <div id="m8-progress" class="m8-spatial__progress" aria-hidden="true"></div>
+    </div>
+    <button id="m8-anchor-action" class="m8-spatial__hint" type="button" disabled>选择一枚晶体</button>
+    <button id="m8-return-overview" class="m8-spatial__return" type="button"><span class="m8-spatial__hex" aria-hidden="true">⬡</span> 返回记忆总览</button>
+    <ol id="m8-entity-list" class="m8-spatial__sr-list" aria-label="五枚空间记忆晶体"></ol>
   </section>
 
   <div id="loading-screen">
@@ -247,19 +227,6 @@
         star.style.setProperty('--max-opacity', (0.3 + Math.random() * 0.7).toFixed(2));
         star.style.background = colors[Math.floor(Math.random() * colors.length)];
         fragment.appendChild(star);
-      }
-      for (var j = 0; j < 40; j++) {
-        var dust = document.createElement('div');
-        dust.className = 'loading-dust';
-        var ds = 60 + Math.random() * 140;
-        dust.style.setProperty('--size', ds + 'px');
-        dust.style.setProperty('--x', Math.random() * 100 + '%');
-        dust.style.setProperty('--y', Math.random() * 100 + '%');
-        dust.style.setProperty('--dur', (6 + Math.random() * 8) + 's');
-        dust.style.setProperty('--delay', (Math.random() * 6) + 's');
-        dust.style.setProperty('--dx', ((Math.random() - 0.5) * 60).toFixed(0));
-        dust.style.setProperty('--dy', ((Math.random() - 0.5) * 40).toFixed(0));
-        fragment.appendChild(dust);
       }
       container.appendChild(fragment);
     })();
