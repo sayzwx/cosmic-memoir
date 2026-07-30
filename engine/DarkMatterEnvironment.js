@@ -1,9 +1,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import { createCinematicReferenceBackdrop } from './CinematicReferenceBackdrop.js';
 import { createDeepSpaceField } from './DeepSpaceField.js';
-import { createSpiralGalaxy } from './SpiralGalaxy.js';
-import { createAtmosphericPlanet } from './AtmosphericPlanet.js';
 import { createNebulaDust } from './NebulaDust.js';
-import { createCosmicWeb } from './CosmicWeb.js';
 import { getQualityBudget, normalizeQuality } from './qualityBudgets.js';
 
 export function createDarkMatterEnvironment(options = {}) {
@@ -12,43 +10,56 @@ export function createDarkMatterEnvironment(options = {}) {
   let quality = normalizeQuality(options.quality);
   let mobile = Boolean(options.mobile);
   let reducedMotion = Boolean(options.reducedMotion);
-  const shared = { quality, mobile };
+  let motionElapsed = 0;
+  let disposed = false;
+  const shared = { quality, mobile, reducedMotion, pixelRatio: options.pixelRatio };
   const initialBudget = getQualityBudget(quality, mobile);
+  const backdrop = createCinematicReferenceBackdrop({ ...shared, ...options.backdrop });
   const stars = createDeepSpaceField({ ...shared, capacity: initialBudget.stars, ...options.stars });
-  const galaxy = createSpiralGalaxy({ ...shared, capacity: initialBudget.galaxy, ...options.galaxy });
-  const planet = createAtmosphericPlanet({ ...shared, ...options.planet });
   const dust = createNebulaDust({ ...shared, capacity: initialBudget.dust, ...options.dust });
-  const web = createCosmicWeb({ ...shared, capacity: initialBudget.webSegments, ...options.web });
-  const modules = [stars, galaxy, planet, dust, web];
+  // Backdrop must render first; carrier subjects are owned by the memory entities.
+  const modules = [backdrop, stars, dust];
   for (const module of modules) object3D.add(module.object3D);
-  stars.setReducedMotion(reducedMotion);
-  dust.setReducedMotion(reducedMotion);
+
+  const callModules = (method, ...args) => {
+    if (disposed) return;
+    for (const module of modules) module[method]?.(...args);
+  };
+
+  callModules('setQuality', quality, mobile);
+  callModules('setReducedMotion', reducedMotion);
+  if (options.pixelRatio != null) callModules('setPixelRatio', options.pixelRatio);
 
   return {
-    object3D, modules, stars, galaxy, planet, dust, web,
+    object3D, modules, backdrop, stars, dust,
     drawCalls: modules.reduce((sum, module) => sum + module.drawCalls, 0),
-    update(delta, elapsed) {
-      const dt = Math.min(Math.max(delta, 0), 0.05);
-      const motionDelta = reducedMotion ? 0 : dt;
-      stars.update(motionDelta, elapsed);
-      galaxy.update(motionDelta, elapsed);
-      planet.update(motionDelta, elapsed);
-      dust.update(motionDelta, elapsed);
-      web.update(motionDelta, elapsed);
+    update(delta) {
+      if (disposed) return;
+      const numericDelta = Number.isFinite(delta) ? delta : 0;
+      const dt = Math.min(Math.max(numericDelta, 0), 0.05);
+      if (!reducedMotion) motionElapsed += dt;
+      callModules('update', reducedMotion ? 0 : dt, motionElapsed);
     },
     setQuality(value, isMobile = mobile) {
+      if (disposed) return;
       quality = normalizeQuality(value);
       mobile = Boolean(isMobile);
-      for (const module of modules) module.setQuality(quality, mobile);
+      callModules('setQuality', quality, mobile);
     },
     setReducedMotion(value) {
+      if (disposed) return;
       reducedMotion = Boolean(value);
-      stars.setReducedMotion(reducedMotion);
-      dust.setReducedMotion(reducedMotion);
+      callModules('setReducedMotion', reducedMotion);
     },
-    setPixelRatio(value) { stars.setPixelRatio(value); },
-    setReveal(value) { web.setReveal(value); },
+    setPixelRatio(value) {
+      if (!Number.isFinite(value) || value <= 0) return;
+      callModules('setPixelRatio', value);
+    },
+    // Transitional no-op for renderers that still report the former web reveal.
+    setReveal() {},
     dispose() {
+      if (disposed) return;
+      disposed = true;
       object3D.removeFromParent();
       for (const module of modules) module.dispose();
       modules.length = 0;

@@ -134,6 +134,11 @@ export class SceneRouter {
       case 'pinch':
         this.currentScene.onPinch(data.scale, data.centerX, data.centerY, data.phase);
         break;
+      case 'longPress':
+        if (typeof this.currentScene.onLongPress === 'function') {
+          this.currentScene.onLongPress(data.x, data.y, data.duration);
+        }
+        break;
     }
   }
 

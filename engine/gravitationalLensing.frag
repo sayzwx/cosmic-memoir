@@ -36,7 +36,7 @@ void main() {
     color.rgb += vec3(1.0, 0.85, 0.5) * ring * 0.5;
     color.rgb += vec3(0.8, 0.6, 0.3) * ringGlow;
 
-    float vignette = smoothstep(1.3, 0.2, dist * 2.0);
+    float vignette = 1.0 - smoothstep(0.2, 1.3, dist * 2.0);
     color.rgb *= mix(1.0, vignette, 0.4 + uScrollProgress * 0.3);
 
     if (uScrollProgress > 0.5) {

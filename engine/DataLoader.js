@@ -125,6 +125,7 @@ export class DataLoader {
     };
     const experience = memory?.experience;
     const photos = memory?.media?.photos;
+    const carrierTypes = ['galacticCore', 'einsteinRing', 'cosmicWeb', 'planetaryMonument', 'epilogueSkybox'];
     if (!experience || experience.id !== 'M8' ||
         experience.variant !== 'deepSpaceSpatialMemory' || experience.version !== 2) {
       fail('experience must identify M8/deepSpaceSpatialMemory version 2');
@@ -137,6 +138,14 @@ export class DataLoader {
     const ids = photos.map(photo => photo?.id);
     if (ids.some(id => typeof id !== 'string' || !id.trim()) || new Set(ids).size !== ids.length) {
       fail('photo entity ids must be non-empty and unique');
+    }
+    const carriers = photos.map(photo => photo?.carrier);
+    if (carriers.some(carrier => typeof carrier !== 'string' || !carrier.trim())) {
+      fail('carrier is required for every photo entity');
+    }
+    if (new Set(carriers).size !== carrierTypes.length ||
+        carrierTypes.some(carrier => !carriers.includes(carrier))) {
+      fail(`carriers must contain exactly one of each: ${carrierTypes.join(', ')}`);
     }
     if (new Set(experience.entityOrder).size !== ids.length ||
         experience.entityOrder.some(id => !ids.includes(id))) {

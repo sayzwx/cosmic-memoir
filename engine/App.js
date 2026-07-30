@@ -23,6 +23,15 @@ export class CosmicMemoirApp {
     this._resizeTimer = null;
     this._navigationLocked = false;
     this._onResize = null;
+    this._profilerEventsBound = false;
+    this._onQualityChange = ({ quality }) => {
+      if (this.router.currentScene) {
+        this.router.currentScene.onQualityChange(quality);
+      }
+    };
+    this._onPerformanceSample = (detail) => {
+      this.router.currentScene?.onPerformanceSample?.(detail);
+    };
 
     this.bindInput();
     this.bindResize();
@@ -31,12 +40,12 @@ export class CosmicMemoirApp {
   async init() {
     this.universeData = await this.data.loadUniverse();
 
+    if (!this._profilerEventsBound) {
+      this.profiler.on('qualityChange', this._onQualityChange);
+      this.profiler.on('performanceSample', this._onPerformanceSample);
+      this._profilerEventsBound = true;
+    }
     this.profiler.measure();
-    this.profiler.on('qualityChange', ({ quality }) => {
-      if (this.router.currentScene) {
-        this.router.currentScene.onQualityChange(quality);
-      }
-    });
 
     await this.loadChapter(0);
   }
@@ -172,6 +181,10 @@ export class CosmicMemoirApp {
     this.input.on('pinch', (data) => {
       this.router.handleInput('pinch', data);
     });
+
+    this.input.on('longPress', (data) => {
+      this.router.handleInput('longPress', data);
+    });
   }
 
   bindResize() {
@@ -196,6 +209,11 @@ export class CosmicMemoirApp {
     }
 
     this.profiler.stop();
+    if (this._profilerEventsBound) {
+      this.profiler.off('qualityChange', this._onQualityChange);
+      this.profiler.off('performanceSample', this._onPerformanceSample);
+      this._profilerEventsBound = false;
+    }
     if (this._onResize) window.removeEventListener('resize', this._onResize);
     this._onResize = null;
     this.router.destroy();

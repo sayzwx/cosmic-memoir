@@ -10,7 +10,10 @@ export class InputAdapter {
       lastY: 0,
       startX: 0,
       startY: 0,
-      pinchStartDist: 0
+      pinchStartDist: 0,
+      isMousePending: false,
+      isTouchPending: false,
+      isTouchConsumed: false
     };
 
     this.callbacks = {
@@ -19,21 +22,26 @@ export class InputAdapter {
       drag: [],
       dragEnd: [],
       tap: [],
-      pinch: []
+      pinch: [],
+      longPress: []
     };
 
     this.dragThreshold = 5;
+    this.longPressThreshold = 2000;
+    this._longPressTimer = null;
+    this._longPressStartTime = 0;
 
     this._boundHandlers = {
       touchstart: (e) => this.handleTouch(e, 'start'),
       touchmove: (e) => this.handleTouch(e, 'move'),
       touchend: (e) => this.handleTouch(e, 'end'),
+      touchcancel: (e) => this.handleTouch(e, 'cancel'),
       mousedown: (e) => this.handleMouse(e, 'start'),
       mousemove: (e) => this.handleMouse(e, 'move'),
       mouseup: (e) => this.handleMouse(e, 'end'),
       mouseleave: (e) => {
-        if (this.state.isDragging) {
-          this.handleMouse(e, 'end');
+        if (this.state.isMousePending || this.state.isDragging) {
+          this.handleMouse(e, 'cancel');
         }
       },
       wheel: (e) => this.handleWheel(e),
@@ -50,6 +58,7 @@ export class InputAdapter {
       this.element.addEventListener('touchstart', h.touchstart, { passive: false });
       this.element.addEventListener('touchmove', h.touchmove, { passive: false });
       this.element.addEventListener('touchend', h.touchend, { passive: false });
+      this.element.addEventListener('touchcancel', h.touchcancel, { passive: false });
     }
 
     this.element.addEventListener('mousedown', h.mousedown);
@@ -70,34 +79,53 @@ export class InputAdapter {
   handleMouse(e, phase) {
     switch (phase) {
       case 'start': {
-        this.state.isDragging = true;
+        this.cancelLongPress();
+        this.state.isMousePending = true;
+        this.state.isDragging = false;
         this.state.hasDragged = false;
         this.state.startX = e.clientX;
         this.state.startY = e.clientY;
         this.state.lastX = e.clientX;
         this.state.lastY = e.clientY;
 
-        this.emit('dragStart', { x: e.clientX, y: e.clientY });
-
         document.addEventListener('mousemove', this._boundHandlers.mousemove);
         document.addEventListener('mouseup', this._boundHandlers.mouseup);
         break;
       }
       case 'move': {
-        if (!this.state.isDragging) return;
+        if (!this.state.isMousePending && !this.state.isDragging) return;
+
+        const totalX = e.clientX - this.state.startX;
+        const totalY = e.clientY - this.state.startY;
+
+        if (this.state.isMousePending) {
+          if (Math.abs(totalX) <= this.dragThreshold && Math.abs(totalY) <= this.dragThreshold) {
+            return;
+          }
+
+          this.state.isMousePending = false;
+          this.state.isDragging = true;
+          this.state.hasDragged = true;
+          this.state.lastX = e.clientX;
+          this.state.lastY = e.clientY;
+
+          this.emit('dragStart', { x: this.state.startX, y: this.state.startY });
+          this.emit('drag', {
+            deltaX: totalX,
+            deltaY: totalY,
+            startX: this.state.startX,
+            startY: this.state.startY,
+            currentX: e.clientX,
+            currentY: e.clientY
+          });
+          return;
+        }
 
         const deltaX = e.clientX - this.state.lastX;
         const deltaY = e.clientY - this.state.lastY;
 
         this.state.lastX = e.clientX;
         this.state.lastY = e.clientY;
-
-        const totalX = e.clientX - this.state.startX;
-        const totalY = e.clientY - this.state.startY;
-
-        if (Math.abs(totalX) > this.dragThreshold || Math.abs(totalY) > this.dragThreshold) {
-          this.state.hasDragged = true;
-        }
 
         this.emit('drag', {
           deltaX,
@@ -110,17 +138,26 @@ export class InputAdapter {
         break;
       }
       case 'end': {
-        if (!this.state.isDragging) return;
+        if (!this.state.isMousePending && !this.state.isDragging) return;
 
-        const totalDeltaX = e.clientX - this.state.startX;
-        const totalDeltaY = e.clientY - this.state.startY;
+        if (this.state.isDragging) {
+          const totalDeltaX = e.clientX - this.state.startX;
+          const totalDeltaY = e.clientY - this.state.startY;
+          this.emit('dragEnd', { totalDeltaX, totalDeltaY });
+        }
 
-        this.state.isDragging = false;
+        this.resetMouseState({ preserveHasDragged: true });
+        break;
+      }
+      case 'cancel': {
+        if (this.state.isDragging) {
+          this.emit('dragEnd', {
+            totalDeltaX: e.clientX - this.state.startX,
+            totalDeltaY: e.clientY - this.state.startY
+          });
+        }
 
-        this.emit('dragEnd', { totalDeltaX, totalDeltaY });
-
-        document.removeEventListener('mousemove', this._boundHandlers.mousemove);
-        document.removeEventListener('mouseup', this._boundHandlers.mouseup);
+        this.resetMouseState({ preserveHasDragged: this.state.hasDragged });
         break;
       }
     }
@@ -133,15 +170,21 @@ export class InputAdapter {
 
         if (e.touches.length === 1) {
           const touch = e.touches[0];
-          this.state.isDragging = true;
+          this.state.isDragging = false;
           this.state.hasDragged = false;
+          this.state.isTouchPending = true;
+          this.state.isTouchConsumed = false;
           this.state.startX = touch.clientX;
           this.state.startY = touch.clientY;
           this.state.lastX = touch.clientX;
           this.state.lastY = touch.clientY;
 
-          this.emit('dragStart', { x: touch.clientX, y: touch.clientY });
-        } else if (e.touches.length === 2) {
+          this.startLongPress();
+        } else if (e.touches.length >= 2) {
+          this.cancelLongPress();
+          this.state.isTouchPending = false;
+          this.state.isTouchConsumed = false;
+          if (e.touches.length !== 2) break;
           if (this.state.isDragging) {
             this.emit('dragEnd', {
               totalDeltaX: this.state.lastX - this.state.startX,
@@ -150,6 +193,7 @@ export class InputAdapter {
             });
           }
           this.state.isDragging = false;
+          this.state.hasDragged = false;
           this.state.pinchStartDist = this.getPinchDistance(e.touches);
           this.emit('pinch', {
             scale: 1,
@@ -163,7 +207,35 @@ export class InputAdapter {
       case 'move': {
         e.preventDefault();
 
-        if (e.touches.length === 1 && this.state.isDragging) {
+        if (e.touches.length === 1 && this.state.isTouchConsumed) {
+          break;
+        }
+
+        if (e.touches.length === 1 && this.state.isTouchPending) {
+          const touch = e.touches[0];
+          const totalX = touch.clientX - this.state.startX;
+          const totalY = touch.clientY - this.state.startY;
+
+          this.state.lastX = touch.clientX;
+          this.state.lastY = touch.clientY;
+
+          if (Math.abs(totalX) > this.dragThreshold || Math.abs(totalY) > this.dragThreshold) {
+            this.cancelLongPress();
+            this.state.isTouchPending = false;
+            this.state.isDragging = true;
+            this.state.hasDragged = true;
+
+            this.emit('dragStart', { x: this.state.startX, y: this.state.startY });
+            this.emit('drag', {
+              deltaX: totalX,
+              deltaY: totalY,
+              startX: this.state.startX,
+              startY: this.state.startY,
+              currentX: touch.clientX,
+              currentY: touch.clientY
+            });
+          }
+        } else if (e.touches.length === 1 && this.state.isDragging) {
           const touch = e.touches[0];
           const deltaX = touch.clientX - this.state.lastX;
           const deltaY = touch.clientY - this.state.lastY;
@@ -176,6 +248,7 @@ export class InputAdapter {
 
           if (Math.abs(totalX) > this.dragThreshold || Math.abs(totalY) > this.dragThreshold) {
             this.state.hasDragged = true;
+            this.cancelLongPress();
           }
 
           this.emit('drag', {
@@ -186,7 +259,9 @@ export class InputAdapter {
             currentX: touch.clientX,
             currentY: touch.clientY
           });
-        } else if (e.touches.length === 2) {
+        } else if (e.touches.length >= 2) {
+          this.cancelLongPress();
+          if (e.touches.length !== 2) break;
           const currentDist = this.getPinchDistance(e.touches);
           const scale = this.state.pinchStartDist > 0
             ? currentDist / this.state.pinchStartDist
@@ -199,7 +274,12 @@ export class InputAdapter {
         break;
       }
       case 'end': {
-        if (this.state.isDragging) {
+        this.cancelLongPress();
+        if (this.state.isTouchConsumed) {
+          this.state.isTouchConsumed = false;
+          this.state.isTouchPending = false;
+          this.state.hasDragged = false;
+        } else if (this.state.isDragging) {
           const touch = e.changedTouches[0];
           const totalDeltaX = touch.clientX - this.state.startX;
           const totalDeltaY = touch.clientY - this.state.startY;
@@ -207,10 +287,10 @@ export class InputAdapter {
           this.state.isDragging = false;
 
           this.emit('dragEnd', { totalDeltaX, totalDeltaY });
-
-          if (!this.state.hasDragged) {
-            this.emit('tap', { x: touch.clientX, y: touch.clientY });
-          }
+        } else if (this.state.isTouchPending) {
+          const touch = e.changedTouches[0];
+          this.state.isTouchPending = false;
+          this.emit('tap', { x: touch.clientX, y: touch.clientY });
         }
 
         if (e.touches.length < 2) {
@@ -221,7 +301,70 @@ export class InputAdapter {
         }
         break;
       }
+      case 'cancel': {
+        e.preventDefault();
+        this.cancelLongPress();
+
+        if (this.state.isDragging) {
+          this.state.isDragging = false;
+          this.emit('dragEnd', {
+            totalDeltaX: this.state.lastX - this.state.startX,
+            totalDeltaY: this.state.lastY - this.state.startY,
+            cancelled: true
+          });
+        }
+
+        if (this.state.pinchStartDist > 0) {
+          this.emit('pinch', { scale: 1, centerX: 0, centerY: 0, phase: 'end' });
+        }
+        this.resetTouchState();
+        break;
+      }
     }
+  }
+
+  startLongPress() {
+    this.cancelLongPress();
+    this._longPressStartTime = Date.now();
+    this._longPressTimer = setTimeout(() => {
+      this._longPressTimer = null;
+      if (!this.state.isTouchPending || this.state.hasDragged || this.state.pinchStartDist > 0) return;
+
+      this.state.isTouchPending = false;
+      this.state.isTouchConsumed = true;
+
+      this.emit('longPress', {
+        x: this.state.lastX,
+        y: this.state.lastY,
+        duration: Date.now() - this._longPressStartTime
+      });
+    }, this.longPressThreshold);
+  }
+
+  cancelLongPress() {
+    if (this._longPressTimer !== null) {
+      clearTimeout(this._longPressTimer);
+      this._longPressTimer = null;
+    }
+    this._longPressStartTime = 0;
+  }
+
+  resetTouchState() {
+    this.state.isDragging = false;
+    this.state.hasDragged = false;
+    this.state.isTouchPending = false;
+    this.state.isTouchConsumed = false;
+    this.state.pinchStartDist = 0;
+  }
+
+  resetMouseState({ preserveHasDragged = false } = {}) {
+    this.state.isMousePending = false;
+    this.state.isDragging = false;
+    if (!preserveHasDragged) {
+      this.state.hasDragged = false;
+    }
+    document.removeEventListener('mousemove', this._boundHandlers.mousemove);
+    document.removeEventListener('mouseup', this._boundHandlers.mouseup);
   }
 
   handleClick(e) {
@@ -271,13 +414,15 @@ export class InputAdapter {
   destroy() {
     const h = this._boundHandlers;
 
-    document.removeEventListener('mousemove', h.mousemove);
-    document.removeEventListener('mouseup', h.mouseup);
+    this.cancelLongPress();
+    this.resetMouseState();
+    this.resetTouchState();
 
     if (this.isTouch) {
       this.element.removeEventListener('touchstart', h.touchstart);
       this.element.removeEventListener('touchmove', h.touchmove);
       this.element.removeEventListener('touchend', h.touchend);
+      this.element.removeEventListener('touchcancel', h.touchcancel);
     }
 
     this.element.removeEventListener('mousedown', h.mousedown);

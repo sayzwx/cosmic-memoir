@@ -1,18 +1,34 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { CelestialRenderer } from '../core/CelestialRenderer.js';
 import { createDarkMatterEnvironment } from './darkMatter/DarkMatterEnvironment.js';
-import { SpatialPhotoEntity } from './darkMatter/SpatialPhotoEntity.js';
+import { M8DiscoveryController } from './darkMatter/M8DiscoveryController.js';
+import { MEMORY_CARRIER_STATES } from './darkMatter/MemoryCarrier.js';
+import { GalacticCoreMemory } from './darkMatter/GalacticCoreMemory.js';
+import { EinsteinRingMemory } from './darkMatter/EinsteinRingMemory.js';
+import { CosmicWebMemory } from './darkMatter/CosmicWebMemory.js';
+import { PlanetaryMonumentMemory } from './darkMatter/PlanetaryMonumentMemory.js';
+import { EpilogueSkyboxMemory } from './darkMatter/EpilogueSkyboxMemory.js';
 import { SpatialMemoryCamera, SPATIAL_CAMERA_STATES } from './darkMatter/SpatialMemoryCamera.js';
-import { normalizeQuality } from './darkMatter/qualityBudgets.js';
+import { getQualityBudget, normalizeQuality } from './darkMatter/qualityBudgets.js';
 
 const TELEMETRY_INTERVAL = 1000 / 15;
 const ENTITY_COUNT = 5;
 const DPR_LIMITS = Object.freeze({ high: 1.5, medium: 1.25, low: 1 });
-const TABLEAU_POSITIONS = Object.freeze([
-  [0, 4.6, -7], [-6.1, 1.3, -9], [5.9, 1.1, -10], [-4.2, -4, -11], [4.5, -3.8, -9]
+const CARRIER_CLASSES = Object.freeze({
+  galacticCore: GalacticCoreMemory,
+  einsteinRing: EinsteinRingMemory,
+  cosmicWeb: CosmicWebMemory,
+  planetaryMonument: PlanetaryMonumentMemory,
+  epilogueSkybox: EpilogueSkyboxMemory
+});
+const IMMERSIVE_STATES = new Set([
+  SPATIAL_CAMERA_STATES.PASSAGE,
+  SPATIAL_CAMERA_STATES.DIVE,
+  SPATIAL_CAMERA_STATES.PANORAMA
 ]);
 
-function eventDetail(event) { return event?.detail || {}; }
+const detailOf = event => event?.detail || {};
+const clamp01 = value => THREE.MathUtils.clamp(Number(value) || 0, 0, 1);
 
 export class DarkMatterRenderer extends CelestialRenderer {
   constructor(canvas, data, options = {}) {
@@ -23,32 +39,37 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.reducedMotion = false;
     this.environment = null;
     this.cameraRig = null;
-    this.entities = [];
-    this.entityById = new Map();
+    this.discovery = null;
+    this.carriers = [];
+    this.carrierById = new Map();
+    // Keep these public aliases for consumers of the original M8 renderer.
+    this.entities = this.carriers;
+    this.entityById = this.carrierById;
     this.pickTargets = [];
     this.visitedIds = new Set();
+    this.focusedCarrier = null;
     this.focusedEntity = null;
+    this.aimedCarrier = null;
+    this.aimedTarget = null;
     this.currentCandidate = null;
-    this.focusStableAt = 0;
     this.phase = 'intro';
     this.completed = false;
     this.destroyed = false;
     this.firstFocusSent = false;
     this.lensMilestoneSent = false;
     this.completeMilestoneSent = false;
+    this.corePassageEntered = false;
+    this.lastDiscovery = null;
+    this.lastSample = null;
     this.lastTelemetryAt = -Infinity;
     this.telemetryTimer = null;
-    this.lastPinchAt = -Infinity;
     this.pinchBaseDistance = 0;
+    this.performanceQuality = this.quality;
     this.raycaster = new THREE.Raycaster();
     this.ndc = new THREE.Vector2();
+    this.centerNdc = new THREE.Vector2(0, 0);
     this.sceneTarget = new THREE.Vector3(0, 0, -10);
-    this.tableauTargets = TABLEAU_POSITIONS.map(position => new THREE.Vector3(...position));
-    this.focusMetadata = {};
-    this.focusOffset = new THREE.Vector3();
-    this.letterRing = null;
-    this.letterRingGeometry = null;
-    this.letterRingMaterial = null;
+    this.scratchPosition = new THREE.Vector3();
   }
 
   async init() {
@@ -58,33 +79,34 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.reducedMotion = Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / Math.max(1, height);
-    this.camera.fov = 58;
+    this.camera.fov = 52;
     this.camera.near = 0.1;
     this.camera.far = 4000;
     this.camera.updateProjectionMatrix();
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 0.78;
+    this.scene.background = new THREE.Color(0x000000);
     this._applyPixelRatio();
 
-    // The environment is deliberately seven normal render calls:
-    // stars, galaxy, planet surface/cloud/rim, dust, and cosmic web.
     this.environment = createDarkMatterEnvironment({
       quality: this.quality,
       mobile: this.mobile,
       reducedMotion: this.reducedMotion,
       pixelRatio: this.renderer.getPixelRatio(),
-      stars: { radius: 155 },
-      galaxy: { radius: 25, position: [-3, 1, -35], inclination: -0.78, yaw: -0.2, roll: -0.28 },
-      planet: { radius: 9, position: [19, -12, -23], keepCloudsOnLow: false },
-      dust: { extent: [70, 32, 55], position: [0, 0, -35] },
-      web: { extent: [56, 34, 42], position: [0, 0, -27], reveal: 0 }
+      stars: { radius: 205 },
+      dust: { extent: [92, 42, 68], position: [0, 0, -42] }
     });
     this.scene.add(this.environment.object3D);
     this.environment.setPixelRatio(this.renderer.getPixelRatio());
-    this.scene.background = new THREE.Color(0x01030a);
 
-    this._createEntities();
+    this._createCarriers();
+    this.discovery = new M8DiscoveryController();
+    this.discovery.setCarriers(this.carriers);
     this._unlockEligible(true);
+
     this.cameraRig = new SpatialMemoryCamera(this.camera, {
-      target: this.sceneTarget, distance: 22, minDistance: 11, maxDistance: 42,
+      target: this.sceneTarget, distance: 22, minDistance: 8, maxDistance: 48,
       yaw: 0.04, pitch: 0.1, reducedMotion: this.reducedMotion
     });
     this.camera.position.set(2, 5, 38);
@@ -92,109 +114,138 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.cameraRig.intro(this.sceneTarget, 22, 1.45);
 
     this.bindEvent(window, 'spatialMemoryScanRequested', event => {
-      const detail = eventDetail(event);
-      if (!detail.memoryId || detail.memoryId === this.memoryId) this._scan(detail.entityId);
+      const detail = detailOf(event);
+      if (detail.memoryId && detail.memoryId !== this.memoryId) return;
+      if (detail.action === 'activate') this._activateFocused();
+      else this._beginWebScan(detail.entityId, 'event');
     });
     this.bindEvent(window, 'spatialMemoryReturnOverview', event => {
-      const detail = eventDetail(event);
+      const detail = detailOf(event);
       if (detail.memoryId && detail.memoryId !== this.memoryId) return;
       if (this._returnOverview()) event.preventDefault?.();
     });
 
+    await Promise.allSettled(this.carriers.map(carrier => carrier.ready).filter(Boolean));
+    if (this.destroyed) return;
     this._emitReady();
     this._emitTelemetry(true);
   }
 
-  _createEntities() {
+  _createCarriers() {
     const photos = Array.isArray(this.media.photos) ? this.media.photos : [];
     const order = Array.isArray(this.data.experience?.entityOrder)
       ? this.data.experience.entityOrder : photos.map(photo => photo.id);
-    for (const id of order.slice(0, ENTITY_COUNT)) {
-      const source = photos.find(photo => photo.id === id);
-      if (!source) continue;
-      const data = {
-        ...source,
-        locked: true,
-        glowColor: source.accent,
-        chromatic: source.role === 'lensReflection' ? 0.018 : undefined,
-        distortion: source.role === 'lensReflection' ? 0.14 : undefined
-      };
-      const entity = new SpatialPhotoEntity(data, { quality: this.quality });
-      entity.position.fromArray(source.position || [0, 0, -8]);
-      if (source.rotation) entity.rotation.fromArray(source.rotation);
-      entity.userData.focusDistance = Math.max(2.8, source.focusOffset?.[2] || 3.8);
-      entity.captureHome();
-      entity.setReveal(0, true);
-      this.scene.add(entity);
-      this.entities.push(entity);
-      this.entityById.set(id, entity);
-      if (source.role === 'letter') this._addEinsteinRing(entity, source.accent);
+    const ordered = order.map(id => photos.find(photo => photo.id === id)).filter(Boolean);
+    const types = new Set(ordered.map(source => source.carrier));
+    if (ordered.length !== ENTITY_COUNT || Object.keys(CARRIER_CLASSES).some(type => !types.has(type))) {
+      throw new Error('DarkMatterRenderer requires exactly one of each of the five MemoryCarrier implementations.');
+    }
+
+    const budget = getQualityBudget(this.quality, this.mobile);
+    for (const source of ordered) {
+      const Carrier = CARRIER_CLASSES[source.carrier];
+      const unlocked = (source.unlockAfter || []).length === 0;
+      const carrier = new Carrier({ ...source, locked: !unlocked }, {
+        quality: this.quality,
+        mobile: this.mobile,
+        reducedMotion: this.reducedMotion,
+        unlocked,
+        visited: Boolean(source.visited),
+        textureLoader: this.textureLoader,
+        capacity: source.carrier === 'galacticCore' ? budget.galaxy : budget.webSegments
+      });
+      if (Array.isArray(source.position)) carrier.position.fromArray(source.position);
+      if (Array.isArray(source.rotation)) carrier.rotation.fromArray(source.rotation);
+      carrier.userData.memoryCarrier = carrier;
+      carrier.setQuality(this.quality, this.mobile);
+      carrier.setReducedMotion(this.reducedMotion);
+      if (carrier.visited) this.visitedIds.add(carrier.memoryId);
+      this.scene.add(carrier);
+      this.carriers.push(carrier);
+      this.carrierById.set(carrier.memoryId, carrier);
     }
   }
 
-  _addEinsteinRing(entity, color) {
-    this.letterRingGeometry = new THREE.RingGeometry(1.72, 1.82, 64);
-    this.letterRingMaterial = new THREE.MeshBasicMaterial({
-      color: color || 0xd8b98c, transparent: true, opacity: 0,
-      depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
-    });
-    this.letterRing = new THREE.Mesh(this.letterRingGeometry, this.letterRingMaterial);
-    this.letterRing.position.z = 0.025;
-    entity.add(this.letterRing);
-  }
-
-  _dependenciesMet(entity) {
-    const dependencies = entity.data.unlockAfter || [];
-    return dependencies.every(id => this.visitedIds.has(id));
+  _dependenciesMet(carrier) {
+    return (carrier.data.unlockAfter || []).every(id => this.visitedIds.has(id));
   }
 
   _unlockEligible(immediate = false) {
     const unlockedIds = [];
-    let candidate = null;
     this.pickTargets.length = 0;
-    for (const entity of this.entities) {
-      if (this._dependenciesMet(entity)) {
-        if (entity.targetReveal === 0) unlockedIds.push(entity.data.id);
-        entity.setReveal(1, immediate);
-        this.pickTargets.push(entity.hitProxy);
-        if (!entity.visited && !candidate) candidate = entity;
-      }
+    let candidate = null;
+    for (const carrier of this.carriers) {
+      const unlocked = carrier.visited || this._dependenciesMet(carrier);
+      const changed = unlocked && !carrier.unlocked;
+      carrier.setUnlocked(unlocked);
+      carrier.visible = unlocked;
+      for (const target of carrier.hitTargets || []) target.visible = unlocked;
+      if (changed && !immediate) unlockedIds.push(carrier.memoryId);
+      if (unlocked && !carrier.visited) this.pickTargets.push(...(carrier.hitTargets || []));
+      if (unlocked && !carrier.visited && !candidate) candidate = carrier;
     }
     this.currentCandidate = candidate;
     return unlockedIds;
   }
 
-  _pick(x, y) {
-    const rect = this.canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height || this.pickTargets.length === 0) return null;
-    this.ndc.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
-    this.raycaster.setFromCamera(this.ndc, this.camera);
-    const hits = this.raycaster.intersectObjects(this.pickTargets, false);
-    return hits[0]?.object?.userData?.spatialPhotoEntity || null;
+  _carrierFromHit(object) {
+    let current = object;
+    while (current) {
+      if (current.userData?.memoryCarrier) return current.userData.memoryCarrier;
+      current = current.parent;
+    }
+    return null;
   }
 
-  _focus(entity) {
-    if (!entity || entity.targetReveal === 0 || entity.reveal < 0.25 || entity.visited && this.completed) return false;
-    if (this.focusedEntity === entity) return true;
-    this.focusedEntity = entity;
-    this.currentCandidate = entity;
-    this.focusStableAt = 0;
+  _raycast(ndc) {
+    if (!this.pickTargets.length) return { carrier: null, target: null };
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const hits = this.raycaster.intersectObjects(this.pickTargets, false);
+    for (const hit of hits) {
+      const carrier = this._carrierFromHit(hit.object);
+      if (carrier?.unlocked && !carrier.visited) return { carrier, target: hit.object };
+    }
+    return { carrier: null, target: null };
+  }
+
+  _pick(x, y) {
+    const rect = this.canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    this.ndc.set(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
+    return this._raycast(this.ndc).carrier;
+  }
+
+  _focus(carrier) {
+    if (!carrier?.unlocked || carrier.visited || this.completed) return false;
+    if (this.focusedCarrier !== carrier) {
+      this.focusedCarrier = carrier;
+      this.focusedEntity = carrier;
+      this.discovery?.setFocusedCarrier(carrier);
+      this.currentCandidate = carrier;
+    }
     this.phase = 'focus';
-    const metadata = entity.getFocusMetadata(this.focusMetadata);
-    const offset = entity.data.focusOffset;
-    metadata.distance = Math.max(2.8, offset?.[2] || metadata.distance);
-    this.focusOffset.set(offset?.[0] || 0, offset?.[1] || 0, 0);
-    this.cameraRig.focus(metadata, {
-      distance: metadata.distance,
-      offset: this.focusOffset,
-      duration: this.reducedMotion ? 0 : 0.82
-    });
-    this._emitFocus(entity, false, `正在对准「${entity.data.title || '未命名记忆'}」…`);
+    const metadata = carrier.getFocusMetadata({});
+    const offset = carrier.data.focusOffset || [0, 0, 0];
+    const duration = this.reducedMotion ? 0 : 0.82;
+    if (carrier.carrierType === 'planetaryMonument') {
+      this.cameraRig.dive(metadata, { altitude: metadata.altitude, duration });
+      this.phase = 'dive';
+    } else if (carrier.carrierType === 'epilogueSkybox') {
+      carrier.enterPanorama();
+      this.cameraRig.panorama(carrier, { duration });
+      this.phase = 'panorama';
+    } else {
+      const distance = carrier.carrierType === 'galacticCore'
+        ? Math.max(carrier.radius * 1.25, 20)
+        : Math.max(5.5, Math.abs(offset[2] || 0));
+      this.cameraRig.focus(metadata, { distance, duration });
+    }
+    this._emitFocus(carrier, false, this._prompt(carrier));
     if (!this.firstFocusSent) {
       this.firstFocusSent = true;
       this._emitMilestone('first-focus');
     }
-    if (entity.data.role === 'lensReflection' && !this.lensMilestoneSent) {
+    if (carrier.data.role === 'lensReflection' && !this.lensMilestoneSent) {
       this.lensMilestoneSent = true;
       this._emitMilestone('lens-reflection');
     }
@@ -202,56 +253,88 @@ export class DarkMatterRenderer extends CelestialRenderer {
     return true;
   }
 
-  _returnOverview() {
-    if (!this.cameraRig || (!this.focusedEntity && this.cameraRig.state === SPATIAL_CAMERA_STATES.OVERVIEW)) return false;
-    if (!this.cameraRig.returnToOverview(this.reducedMotion ? 0 : 0.7)) {
-      this.cameraRig.overview(this.sceneTarget, 22, this.reducedMotion ? 0 : 0.7);
-    }
-    this.focusedEntity = null;
-    this.focusStableAt = 0;
-    this.phase = this.completed ? 'tableau' : 'overview';
-    this._emitFocus(null, false, this.completed ? '五段记忆已连成星座。' : '继续移动视角寻找记忆。');
+  _enterCorePassage(carrier = this.focusedCarrier) {
+    if (carrier?.carrierType !== 'galacticCore' || carrier.state !== MEMORY_CARRIER_STATES.REVEALED) return false;
+    if (this.corePassageEntered) return true;
+    this.corePassageEntered = true;
+    carrier.enterPassage();
+    this.cameraRig.passage(carrier, { depth: Math.max(3, carrier.radius * 0.18), duration: this.reducedMotion ? 0 : 1.15 });
+    this.phase = 'passage';
+    this._emitFocus(carrier, false, '穿过星系核心，再次点击即可收取这段记忆。');
     this._emitTelemetry(true);
     return true;
   }
 
-  _scan(requestedId = null) {
-    const entity = requestedId ? this.entityById.get(requestedId) : this.focusedEntity;
-    if (!entity || entity !== this.focusedEntity || entity.targetReveal === 0) {
-      this._emitFocus(entity || null, Boolean(entity?.targetReveal === 0), '准星内没有可扫描的记忆。');
+  _activateFocused() {
+    const carrier = this.focusedCarrier;
+    if (!carrier || carrier.visited) return false;
+    if (carrier.state !== MEMORY_CARRIER_STATES.REVEALED) return false;
+    if (carrier.carrierType === 'galacticCore' && !this.corePassageEntered) return this._enterCorePassage(carrier);
+    const triggers = {
+      galacticCore: 'gaze-capture',
+      einsteinRing: 'ring-capture',
+      cosmicWeb: 'scan-capture',
+      planetaryMonument: 'monument-capture',
+      epilogueSkybox: 'epilogue-capture'
+    };
+    return this._capture(carrier, triggers[carrier.carrierType]);
+  }
+
+  _beginWebScan(requestedId = null, source = 'keyboard') {
+    const requested = requestedId ? this.carrierById.get(requestedId) : this.focusedCarrier;
+    const carrier = requested?.carrierType === 'cosmicWeb'
+      ? requested : (this.currentCandidate?.carrierType === 'cosmicWeb' ? this.currentCandidate : null);
+    if (!carrier?.unlocked || carrier.visited) {
+      this._emitFocus(carrier, !carrier?.unlocked, '准星内没有可扫描的宇宙网记忆。');
       return false;
     }
-    return this._visit(entity, 'scan');
+    if (this.focusedCarrier !== carrier) this._focus(carrier);
+    const result = this.discovery.beginScan(carrier.memoryId, source);
+    if (result.started) {
+      this.phase = 'scan';
+      this._emitFocus(carrier, false, '扫描进行中，请保持对准。');
+      this._emitTelemetry(true);
+    }
+    return result.started;
   }
 
-  _visit(entity, trigger) {
-    if (!entity || entity.visited) return false;
-    entity.setVisited(true);
-    this.visitedIds.add(entity.data.id);
+  _capture(carrier, trigger) {
+    if (!carrier || carrier.visited || carrier.state !== MEMORY_CARRIER_STATES.REVEALED) return false;
+    carrier.setVisited(true);
+    if (carrier.carrierType === 'einsteinRing') carrier.setTransformationProgress?.(1);
+    if (carrier.carrierType === 'cosmicWeb') carrier.setCaptureProgress?.(1);
+    this.visitedIds.add(carrier.memoryId);
+    const epilogue = this.carriers.find(item => item.carrierType === 'epilogueSkybox');
+    epilogue?.setCollectedIds(Array.from(this.visitedIds));
     const unlockedIds = this._unlockEligible();
-    const progress = this.visitedIds.size / this.entities.length;
+    const progress = this.visitedIds.size / this.carriers.length;
     window.dispatchEvent(new CustomEvent('spatialMemoryVisited', { detail: {
-      memoryId: this.memoryId, entityId: entity.data.id, visitedIds: Array.from(this.visitedIds),
-      visitedCount: this.visitedIds.size, totalEntities: this.entities.length,
-      explorationProgress: progress, trigger, unlockedIds,
-      status: `已发现 ${this.visitedIds.size} / ${this.entities.length} 段记忆。`
+      ...this._carrierDetail(carrier), visitedIds: Array.from(this.visitedIds),
+      visitedCount: this.visitedIds.size, totalEntities: this.carriers.length,
+      explorationProgress: progress, progress, trigger, unlockedIds,
+      status: `已发现 ${this.visitedIds.size} / ${this.carriers.length} 段记忆。`
     }}));
-    if (this.visitedIds.size === this.entities.length) this._complete();
+    if (this.visitedIds.size === this.carriers.length) this._complete(carrier);
+    else this._returnOverview();
     this._emitTelemetry(true);
     return true;
   }
 
-  _complete() {
+  _complete(carrier) {
     if (this.completed) return;
     this.completed = true;
     this.phase = 'tableau';
-    this.environment.setReveal(1);
-    this.cameraRig.tableau(this.sceneTarget, 24, this.reducedMotion ? 0 : 1.15);
+    const epilogue = this.carriers.find(item => item.carrierType === 'epilogueSkybox');
+    epilogue?.setCollectedIds(Array.from(this.visitedIds));
+    epilogue?.enterPanorama();
+    epilogue?.setTableau(true);
+    if (this.cameraRig?.state !== SPATIAL_CAMERA_STATES.PANORAMA && epilogue) {
+      this.cameraRig.panorama(epilogue, { duration: this.reducedMotion ? 0 : 0.8 });
+    }
     window.dispatchEvent(new CustomEvent('hiddenMemoryUnlocked', { detail: {
-      memoryId: this.memoryId, hiddenMemoryId: this.media.hiddenMemoryId,
-      entityId: this.focusedEntity?.data.id || null, visitedIds: Array.from(this.visitedIds),
-      visitedCount: this.visitedIds.size, totalEntities: this.entities.length,
-      explorationProgress: 1, progress: 1
+      ...this._carrierDetail(carrier), hiddenMemoryId: this.media.hiddenMemoryId,
+      visitedIds: Array.from(this.visitedIds), visitedCount: this.visitedIds.size,
+      totalEntities: this.carriers.length, explorationProgress: 1, progress: 1
     }}));
     if (!this.completeMilestoneSent) {
       this.completeMilestoneSent = true;
@@ -259,32 +342,105 @@ export class DarkMatterRenderer extends CelestialRenderer {
     }
   }
 
+  _returnOverview() {
+    if (!this.cameraRig || (!this.focusedCarrier && this.cameraRig.state === SPATIAL_CAMERA_STATES.OVERVIEW)) return false;
+    const previous = this.focusedCarrier;
+    previous?.exitPassage?.();
+    if (!this.completed) previous?.exitPanorama?.();
+    this.discovery?.cancelScan('overview');
+    this.discovery?.setFocusedCarrier(null);
+    if (!this.cameraRig.returnToOverview(this.reducedMotion ? 0 : 0.7)) {
+      this.cameraRig.overview(this.sceneTarget, 22, this.reducedMotion ? 0 : 0.7);
+    }
+    this.focusedCarrier = null;
+    this.focusedEntity = null;
+    this.corePassageEntered = false;
+    this.lastDiscovery = null;
+    this.lastSample = null;
+    this.phase = this.completed ? 'tableau' : 'overview';
+    this._emitFocus(null, false, this.completed ? '五段记忆已连成星座。' : '继续移动视角寻找记忆。');
+    this._emitTelemetry(true);
+    return true;
+  }
+
+  _carrierDetail(carrier = this.focusedCarrier) {
+    const sample = carrier === this.focusedCarrier ? this.lastSample : null;
+    return {
+      memoryId: this.memoryId,
+      ...this._carrierSnapshot(carrier),
+      interaction: sample?.interaction || sample?.type || null,
+      alignment: Number.isFinite(sample?.alignment) ? sample.alignment : null,
+      proximity: Number.isFinite(sample?.proximity) ? sample.proximity : null,
+      prompt: carrier ? this._prompt(carrier) : ''
+    };
+  }
+
+  _carrierSnapshot(carrier) {
+    return {
+      entityId: carrier?.memoryId || null,
+      carrier: carrier?.carrierType || null,
+      state: carrier?.state || null,
+      visited: Boolean(carrier?.visited),
+      unlocked: Boolean(carrier?.unlocked),
+      discoveryProgress: carrier?.discoveryProgress || 0,
+      canScan: Boolean(
+        carrier?.carrierType === 'cosmicWeb'
+        && carrier.unlocked
+        && !carrier.visited
+        && carrier.state !== MEMORY_CARRIER_STATES.REVEALED
+      ),
+      canCapture: carrier?.state === MEMORY_CARRIER_STATES.REVEALED,
+      accent: carrier?.data.accent || null
+    };
+  }
+
+  _prompt(carrier) {
+    if (!carrier) return this.completed ? '五段记忆已连成星座。' : '移动视角寻找记忆。';
+    if (carrier.visited) return `「${carrier.data.title}」已收取。`;
+    if (!carrier.unlocked) return '这段记忆仍被引力锁定。';
+    if (carrier.state === MEMORY_CARRIER_STATES.REVEALED) {
+      if (carrier.carrierType === 'galacticCore' && !this.corePassageEntered) return '核心已显形。点击或向前缩放进入通道。';
+      return '记忆已显形。再次点击即可收取。';
+    }
+    const prompts = {
+      galacticCore: '保持凝视核心 2 秒。',
+      einsteinRing: '保持对准引力环的正面。',
+      cosmicWeb: '长按或按 Space 开始扫描。',
+      planetaryMonument: '接近并对准行星纪念碑。',
+      epilogueSkybox: '环顾全景，让最后的星光汇合。'
+    };
+    return prompts[carrier.carrierType] || '保持对准以发现记忆。';
+  }
+
   _emitReady() {
     window.dispatchEvent(new CustomEvent('darkMatterReady', { detail: {
-      memoryId: this.memoryId, version: 2, hiddenMemoryCount: this.entities.length,
-      requiredCount: this.entities.length, drawCallExpectation: this.environment?.drawCalls + this.entities.length + 1
+      memoryId: this.memoryId, version: 2, hiddenMemoryCount: this.carriers.length,
+      requiredCount: this.carriers.length,
+      carriers: this.carriers.map(carrier => this._carrierSnapshot(carrier)),
+      drawCallExpectation: (this.environment?.drawCalls || 0) + this.carriers.reduce((sum, carrier) => sum + (carrier.drawCalls || 1), 0)
     }}));
   }
 
-  _emitFocus(entity, locked = false, status = '') {
+  _emitFocus(carrier, locked = false, status = '') {
     window.dispatchEvent(new CustomEvent('spatialMemoryFocus', { detail: {
-      memoryId: this.memoryId, entityId: entity?.data.id || null, role: entity?.data.role || null,
-      title: entity?.data.title || '', caption: entity?.data.caption || '', body: entity?.data.body || '',
-      discoveryType: entity?.data.discovery?.type || null, visited: Boolean(entity?.visited), locked, status
+      ...this._carrierDetail(carrier), role: carrier?.data.role || null,
+      title: carrier?.data.title || '', caption: carrier?.data.caption || '', body: carrier?.data.body || '',
+      discoveryType: carrier?.data.discovery?.type || this.lastSample?.type || null,
+      visited: Boolean(carrier?.visited), locked, status
     }}));
   }
 
   _emitMilestone(name) {
     window.dispatchEvent(new CustomEvent('darkMatterMilestone', { detail: {
-      memoryId: this.memoryId, name, milestone: name,
-      progress: this.entities.length ? this.visitedIds.size / this.entities.length : 0
+      ...this._carrierDetail(), name, milestone: name,
+      progress: this.carriers.length ? this.visitedIds.size / this.carriers.length : 0
     }}));
   }
 
   _status() {
     if (this.completed) return '五段记忆已连成星座。';
-    if (this.focusedEntity) return `已对准「${this.focusedEntity.data.title}」。按 Space 扫描。`;
-    return `空间扫描 ${this.visitedIds.size} / ${this.entities.length}`;
+    if (this.focusedCarrier) return this._prompt(this.focusedCarrier);
+    return `空间扫描 ${this.visitedIds.size} / ${this.carriers.length}`;
   }
 
   _emitTelemetry(force = false) {
@@ -301,79 +457,97 @@ export class DarkMatterRenderer extends CelestialRenderer {
       return;
     }
     this.lastTelemetryAt = now;
-    const progress = this.entities.length ? this.visitedIds.size / this.entities.length : 0;
+    const progress = this.carriers.length ? this.visitedIds.size / this.carriers.length : 0;
     const status = this._status();
+    const carrierDetail = this._carrierDetail();
     const detail = {
-      memoryId: this.memoryId, sceneType: 'darkMatter', phase: this.phase,
-      explorationProgress: progress, focusedEntityId: this.focusedEntity?.data.id || null,
-      visitedCount: this.visitedIds.size, totalEntities: this.entities.length,
+      ...carrierDetail, sceneType: 'darkMatter', phase: this.phase,
+      explorationProgress: progress, focusedEntityId: this.focusedCarrier?.memoryId || null,
+      aimedEntityId: this.aimedCarrier?.memoryId || null, visitedCount: this.visitedIds.size,
+      totalEntities: this.carriers.length,
+      carriers: this.carriers.map(carrier => this._carrierSnapshot(carrier)),
       values: { status }, status, timestamp: Date.now()
     };
     window.dispatchEvent(new CustomEvent('sceneTelemetry', { detail }));
     if (force) window.dispatchEvent(new CustomEvent('darkMatterTelemetry', { detail: {
-      memoryId: this.memoryId, progress, convergence: progress, capturedCount: this.visitedIds.size,
-      requiredCount: this.entities.length, strength: progress, longing: progress,
+      ...carrierDetail, progress, convergence: progress, capturedCount: this.visitedIds.size,
+      requiredCount: this.carriers.length, strength: progress, longing: progress,
       lensReflection: this.lensMilestoneSent
     }}));
   }
 
+  onTap(x, y) {
+    if (this._activateFocused()) return true;
+    const carrier = this._pick(x, y);
+    if (carrier) {
+      if (carrier === this.focusedCarrier) return this._activateFocused() || true;
+      return this._focus(carrier);
+    }
+    if (IMMERSIVE_STATES.has(this.cameraRig?.state)) return this._activateFocused();
+    if (this.focusedCarrier) return this._returnOverview();
+    return false;
+  }
+
+  onLongPress(x, y, duration) {
+    const carrier = this._pick(x, y);
+    if (carrier?.carrierType !== 'cosmicWeb') return false;
+    return this._beginWebScan(carrier.memoryId, `longPress:${Math.round(duration || 0)}`);
+  }
+
   onDragStart() {
-    if (this.focusedEntity) return;
-    this.cameraRig?.onDragStart();
+    if (IMMERSIVE_STATES.has(this.cameraRig?.state)) return false;
+    if (this.focusedCarrier) this._returnOverview();
+    return this.cameraRig?.onDragStart() || false;
   }
 
   onDrag(deltaX, deltaY) {
-    if (this.focusedEntity) return;
+    if (IMMERSIVE_STATES.has(this.cameraRig?.state)) return false;
     if (this.cameraRig?.onDrag(deltaX, deltaY)) {
       this.phase = 'overview';
       this._emitTelemetry();
+      return true;
     }
+    return false;
   }
 
   onDragEnd() { this.cameraRig?.onDragEnd(); }
 
   onScroll(deltaY) {
-    if (this.focusedEntity) this._returnOverview();
-    this.cameraRig?.onScroll(deltaY);
+    if (deltaY < 0 && this._enterCorePassage()) return true;
+    if (IMMERSIVE_STATES.has(this.cameraRig?.state)) return false;
+    if (this.focusedCarrier) this._returnOverview();
+    const changed = this.cameraRig?.onScroll(deltaY) || false;
     this.phase = this.completed ? 'tableau' : 'overview';
     this._emitTelemetry();
+    return changed;
   }
 
   onPinch(scale, _centerX, _centerY, phase = 'move') {
-    if (this.focusedEntity) this._returnOverview();
-    if (phase === 'start' || !this.pinchBaseDistance) {
-      this.pinchBaseDistance = this.cameraRig?.targetDistance || 22;
-    }
-    if (phase === 'end') {
-      this.pinchBaseDistance = 0;
-      return;
-    }
+    if (phase !== 'end' && scale > 1 && this._enterCorePassage()) return true;
+    if (IMMERSIVE_STATES.has(this.cameraRig?.state)) return false;
+    if (this.focusedCarrier) this._returnOverview();
+    if (phase === 'start' || !this.pinchBaseDistance) this.pinchBaseDistance = this.cameraRig?.targetDistance || 22;
+    if (phase === 'end') { this.pinchBaseDistance = 0; return true; }
     if (this.cameraRig && Number.isFinite(scale) && scale > 0) {
       this.cameraRig.targetDistance = THREE.MathUtils.clamp(
         this.pinchBaseDistance / scale, this.cameraRig.minDistance, this.cameraRig.maxDistance
       );
     }
     this._emitTelemetry();
-  }
-
-  onTap(x, y) {
-    const entity = this._pick(x, y);
-    if (entity) return this._focus(entity);
-    if (this.focusedEntity) return this._returnOverview();
-    return false;
+    return true;
   }
 
   onKeyDown(key) {
     if (key === 'Escape') return this._returnOverview();
-    if (key === ' ' || key === 'Spacebar') return this._scan();
-    if (key === 'Enter') return this._focus(this.currentCandidate);
+    if (key === ' ' || key === 'Spacebar') return this._beginWebScan(null, 'keyboard');
+    if (key === 'Enter') return this.focusedCarrier ? this._activateFocused() : this._focus(this.currentCandidate);
     const dolly = key === 'w' || key === 'W' || key === 'ArrowUp' ? -90
       : (key === 's' || key === 'S' || key === 'ArrowDown' ? 90 : 0);
-    if (dolly) { this.onScroll(dolly); return true; }
+    if (dolly) return this.onScroll(dolly);
     const orbit = key === 'a' || key === 'A' || key === 'ArrowLeft' ? -0.14
       : (key === 'd' || key === 'D' || key === 'ArrowRight' ? 0.14 : 0);
-    if (orbit) {
-      if (this.focusedEntity) this._returnOverview();
+    if (orbit && !IMMERSIVE_STATES.has(this.cameraRig?.state)) {
+      if (this.focusedCarrier) this._returnOverview();
       this.cameraRig.targetYaw += orbit;
       this.phase = this.completed ? 'tableau' : 'overview';
       this._emitTelemetry(true);
@@ -384,43 +558,57 @@ export class DarkMatterRenderer extends CelestialRenderer {
 
   announceState() {
     this._emitReady();
-    this._emitFocus(this.focusedEntity, false, this._status());
+    this._emitFocus(this.focusedCarrier, false, this._status());
     this._emitTelemetry(true);
   }
 
+  _discoveryContext() {
+    const carrier = this.focusedCarrier;
+    if (!carrier) return null;
+    carrier.getWorldPosition(this.scratchPosition);
+    const distance = this.camera.position.distanceTo(this.scratchPosition);
+    const immersiveView = IMMERSIVE_STATES.has(this.cameraRig?.state);
+    const aimed = this.aimedCarrier === carrier || immersiveView;
+    const proximity = clamp01(1 - distance / (carrier.data.discovery?.distance || 18));
+    const base = {
+      camera: this.camera, focused: true, aimed, isAimed: aimed,
+      aimedTarget: this.aimedTarget, hitTarget: this.aimedTarget,
+      target: this.aimedTarget, distance, proximity,
+      inProximity: proximity > 0, near: proximity > 0,
+      scanning: this.discovery?.scan?.carrierId === carrier.memoryId,
+      scanProgress: this.discovery?.scanProgress || 0
+    };
+    const sample = carrier.getDiscoverySample(base) || {};
+    this.lastSample = sample;
+    return {
+      ...base,
+      alignment: Number.isFinite(sample.alignment) ? sample.alignment : base.alignment,
+      proximity: Number.isFinite(sample.proximity) ? sample.proximity : proximity,
+      inProximity: sample.inProximity ?? base.inProximity,
+      near: sample.inProximity ?? base.near
+    };
+  }
+
   update(deltaTime, elapsedTime) {
-    const dt = Math.min(deltaTime, 0.05);
+    const dt = Math.min(Math.max(deltaTime || 0, 0), 0.05);
     this.cameraRig?.update(dt);
     this.environment?.update(dt, elapsedTime);
-    for (let i = 0; i < this.entities.length; i++) {
-      const entity = this.entities[i];
-      if (this.completed) entity.position.lerp(this.tableauTargets[i], this.reducedMotion ? 1 : Math.min(1, dt * 1.35));
-      entity.update(dt, this.camera);
-      if (entity.data.role === 'hiddenMemory') {
-        // Keep the hidden memory readable enough to acquire, but reserve its
-        // full photographic prominence for a completed scan/dwell.
-        entity.uniforms.uOpacity.value = entity.visited ? 1 : (entity === this.focusedEntity ? 0.58 : 0.25);
-      }
-    }
-    if (this.letterRing) {
-      const owner = this.letterRing.parent;
-      const emphasis = owner === this.focusedEntity || owner?.visited ? 1 : 0.45;
-      this.letterRingMaterial.opacity = owner?.reveal * 0.36 * emphasis;
-      this.letterRing.rotation.z += dt * (this.reducedMotion ? 0 : 0.09);
-    }
-    const progress = this.entities.length ? this.visitedIds.size / this.entities.length : 0;
-    if (!this.completed) this.environment?.setReveal(progress * 0.72);
+    const carrierContext = { camera: this.camera, elapsed: elapsedTime };
+    for (const carrier of this.carriers) carrier.update(dt, carrierContext);
 
-    if (this.focusedEntity && this.cameraRig?.state === SPATIAL_CAMERA_STATES.FOCUSED) {
-      if (!this.focusStableAt) this.focusStableAt = elapsedTime;
-      const type = this.focusedEntity.data.discovery?.type || 'focus';
-      const dwell = type === 'proximity' || type === 'lensing' ? 1.45 : (type === 'milestone' ? 1.65 : 2);
-      if (type !== 'scan' && !this.focusedEntity.visited && elapsedTime - this.focusStableAt >= dwell) {
-        this._visit(this.focusedEntity, 'dwell');
+    const centerHit = this._raycast(this.centerNdc);
+    this.aimedCarrier = centerHit.carrier;
+    this.aimedTarget = centerHit.target;
+    const context = this._discoveryContext();
+    if (context && this.discovery) {
+      this.lastDiscovery = this.discovery.update(dt, context);
+      this.lastSample = this.lastDiscovery.sample || this.lastSample;
+      if (this.lastDiscovery.discovered) {
+        this._emitFocus(this.focusedCarrier, false, this._prompt(this.focusedCarrier));
+        this._emitTelemetry(true);
       }
-    } else if (this.focusedEntity) {
-      this.focusStableAt = 0;
     }
+
     if (this.phase === 'intro' && this.cameraRig?.state === SPATIAL_CAMERA_STATES.OVERVIEW) this.phase = 'overview';
     this._emitTelemetry();
   }
@@ -437,13 +625,29 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.mobile = width <= 768 || Boolean(window.matchMedia?.('(pointer: coarse)').matches);
     this._applyPixelRatio();
     this.environment?.setQuality(this.quality, this.mobile);
+    for (const carrier of this.carriers) carrier.setQuality(this.quality, this.mobile);
   }
 
   onQualityChange(value) {
     this.quality = normalizeQuality(value);
+    this.performanceQuality = this.quality;
     this._applyPixelRatio();
     this.environment?.setQuality(this.quality, this.mobile);
-    for (const entity of this.entities) entity.setQuality(this.quality);
+    for (const carrier of this.carriers) carrier.setQuality(this.quality, this.mobile);
+  }
+
+  onPerformanceSample(sample) {
+    const fps = Number(typeof sample === 'number' ? sample : sample?.fps ?? sample?.averageFps);
+    if (!Number.isFinite(fps)) return false;
+    let next = this.performanceQuality;
+    if (fps < 20) next = 'low';
+    else if (this.performanceQuality === 'high' && fps < 30) next = 'medium';
+    else if (this.performanceQuality === 'low' && fps > 25) next = 'medium';
+    else if (this.performanceQuality === 'medium' && fps > 36) next = 'high';
+    if (next === this.performanceQuality) return false;
+    this.performanceQuality = next;
+    this.onQualityChange(next);
+    return true;
   }
 
   destroy() {
@@ -451,19 +655,17 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.destroyed = true;
     if (this.telemetryTimer !== null) clearTimeout(this.telemetryTimer);
     this.telemetryTimer = null;
-    if (this.letterRing) this.letterRing.removeFromParent();
-    this.letterRingGeometry?.dispose();
-    this.letterRingMaterial?.dispose();
-    this.letterRing = null;
-    this.letterRingGeometry = null;
-    this.letterRingMaterial = null;
-    for (const entity of this.entities) entity.dispose();
-    this.entities.length = 0;
-    this.entityById.clear();
+    this.discovery?.dispose();
+    this.discovery = null;
+    for (const carrier of this.carriers) carrier.dispose();
+    this.carriers.length = 0;
+    this.carrierById.clear();
     this.pickTargets.length = 0;
     this.environment?.dispose();
     this.environment = null;
     this.cameraRig = null;
+    this.focusedCarrier = null;
+    this.focusedEntity = null;
     super.destroy();
   }
 }

@@ -2,7 +2,8 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 
 export const SPATIAL_CAMERA_STATES = Object.freeze({
   INTRO: 'INTRO', OVERVIEW: 'OVERVIEW', ORBITING: 'ORBITING', FOCUSING: 'FOCUSING',
-  FOCUSED: 'FOCUSED', RETURNING: 'RETURNING', TABLEAU: 'TABLEAU'
+  FOCUSED: 'FOCUSED', RETURNING: 'RETURNING', TABLEAU: 'TABLEAU',
+  PASSAGE: 'PASSAGE', DIVE: 'DIVE', PANORAMA: 'PANORAMA'
 });
 
 const clamp = THREE.MathUtils.clamp;
@@ -29,6 +30,7 @@ export class SpatialMemoryCamera {
     this._toPosition = new THREE.Vector3(); this._toQuaternion = new THREE.Quaternion(); this._toTarget = new THREE.Vector3();
     this._returnPosition = new THREE.Vector3(); this._returnQuaternion = new THREE.Quaternion(); this._returnTarget = new THREE.Vector3();
     this._focusWorld = new THREE.Vector3(); this._focusDirection = new THREE.Vector3(); this._up = new THREE.Vector3(0, 1, 0);
+    this._hasReturnState = false;
     this._transitionTime = 0; this._transitionDuration = 1; this._transitionActive = false;
     this._dragging = false; this._pinchDistance = 0;
     this._setOrbitPosition(true);
@@ -52,7 +54,7 @@ export class SpatialMemoryCamera {
   focus(subject, options = {}) {
     const object = subject?.object || subject;
     if (!object?.getWorldPosition) return false;
-    this._returnPosition.copy(this.camera.position); this.camera.getWorldQuaternion(this._returnQuaternion); this._returnTarget.copy(this.target);
+    this._rememberReturnState();
     object.getWorldPosition(this._focusWorld);
     object.getWorldQuaternion(this._worldQuaternion);
     this._focusDirection.set(0, 0, 1).applyQuaternion(this._worldQuaternion).normalize();
@@ -63,8 +65,66 @@ export class SpatialMemoryCamera {
     return true;
   }
 
+  orbitFocus(subject, options = {}) {
+    const object = subject?.object || subject;
+    if (!object?.getWorldPosition) return false;
+    this._rememberReturnState(); object.getWorldPosition(this._focusWorld);
+    const distance = options.distance ?? subject?.distance ?? object.userData?.focusDistance ?? 6;
+    const yaw = options.yaw ?? subject?.yaw ?? this.targetYaw;
+    const pitch = clamp(options.pitch ?? subject?.pitch ?? this.targetPitch, this.minPitch, this.maxPitch);
+    const cp = Math.cos(pitch);
+    this._toPosition.set(Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp)
+      .multiplyScalar(Math.max(0.001, distance)).add(this._focusWorld);
+    this._beginTransition(SPATIAL_CAMERA_STATES.FOCUSING, options.duration ?? subject?.duration ?? 0.8, this._toPosition, this._focusWorld);
+    return true;
+  }
+
+  passage(subject, options = {}) {
+    const object = subject?.object || subject;
+    if (!object?.getWorldPosition) return false;
+    this._rememberReturnState(); object.getWorldPosition(this._focusWorld); object.getWorldQuaternion(this._worldQuaternion);
+    this._focusDirection.set(0, 0, -1).applyQuaternion(this._worldQuaternion).normalize();
+    const distance = options.distance ?? subject?.distance ?? 6;
+    const depth = options.depth ?? subject?.depth ?? 4;
+    this._toPosition.copy(this._focusWorld).addScaledVector(this._focusDirection, depth);
+    this._toTarget.copy(this._toPosition).addScaledVector(this._focusDirection, distance);
+    this._beginTransition(SPATIAL_CAMERA_STATES.PASSAGE, options.duration ?? subject?.duration ?? 1.2, this._toPosition, this._toTarget);
+    return true;
+  }
+
+  dive(subject, options = {}) {
+    const object = subject?.object || subject;
+    if (!object?.getWorldPosition) return false;
+    this._rememberReturnState(); object.getWorldPosition(this._focusWorld);
+    const suppliedNormal = options.surfaceNormal ?? subject?.surfaceNormal ?? object.userData?.surfaceNormal;
+    if (suppliedNormal?.isVector3) this._focusDirection.copy(suppliedNormal);
+    else if (Array.isArray(suppliedNormal)) this._focusDirection.fromArray(suppliedNormal);
+    else if (suppliedNormal) this._focusDirection.set(suppliedNormal.x ?? 0, suppliedNormal.y ?? 1, suppliedNormal.z ?? 0);
+    else this._focusDirection.copy(this._focusWorld);
+    if (this._focusDirection.lengthSq() < 1e-8) this._focusDirection.copy(this._up);
+    this._focusDirection.normalize();
+    const altitude = options.altitude ?? subject?.altitude ?? object.userData?.diveAltitude ?? 5;
+    this._toPosition.copy(this._focusWorld).addScaledVector(this._focusDirection, altitude);
+    this._beginTransition(SPATIAL_CAMERA_STATES.DIVE, options.duration ?? subject?.duration ?? 1, this._toPosition, this._focusWorld);
+    return true;
+  }
+
+  panorama(center, options = {}) {
+    const source = center?.object || center;
+    if (source?.getWorldPosition) source.getWorldPosition(this._focusWorld);
+    else if (source?.isVector3) this._focusWorld.copy(source);
+    else return false;
+    this._rememberReturnState(); this.camera.getWorldDirection(this._focusDirection);
+    this._toTarget.copy(this._focusWorld).add(this._focusDirection);
+    this.camera.getWorldQuaternion(this._worldQuaternion);
+    this._beginTransition(SPATIAL_CAMERA_STATES.PANORAMA, options.duration ?? 1, this._focusWorld, this._toTarget, this._worldQuaternion);
+    return true;
+  }
+
   returnToOverview(duration = 0.7) {
-    if (this.state !== SPATIAL_CAMERA_STATES.FOCUSED && this.state !== SPATIAL_CAMERA_STATES.FOCUSING) return false;
+    const canReturn = this.state === SPATIAL_CAMERA_STATES.FOCUSED || this.state === SPATIAL_CAMERA_STATES.FOCUSING ||
+      this.state === SPATIAL_CAMERA_STATES.PASSAGE || this.state === SPATIAL_CAMERA_STATES.DIVE || this.state === SPATIAL_CAMERA_STATES.PANORAMA;
+    if (!canReturn || !this._hasReturnState) return false;
     this._beginTransition(SPATIAL_CAMERA_STATES.RETURNING, duration, this._returnPosition, this._returnTarget, this._returnQuaternion);
     return true;
   }
@@ -73,6 +133,14 @@ export class SpatialMemoryCamera {
     this.target.copy(target); this.targetDistance = clamp(distance, this.minDistance, this.maxDistance);
     this._setOrbitDestination(); this._beginTransition(SPATIAL_CAMERA_STATES.TABLEAU, duration, this._desiredPosition, this.target);
     return this;
+  }
+
+  _rememberReturnState() {
+    const preserving = this.state === SPATIAL_CAMERA_STATES.FOCUSED || this.state === SPATIAL_CAMERA_STATES.FOCUSING ||
+      this.state === SPATIAL_CAMERA_STATES.PASSAGE || this.state === SPATIAL_CAMERA_STATES.DIVE || this.state === SPATIAL_CAMERA_STATES.PANORAMA;
+    if (this._hasReturnState && preserving) return;
+    this._returnPosition.copy(this.camera.position); this.camera.getWorldQuaternion(this._returnQuaternion); this._returnTarget.copy(this.target);
+    this._hasReturnState = true;
   }
 
   _beginTransition(state, duration, position, target, quaternion = null) {
@@ -134,7 +202,8 @@ export class SpatialMemoryCamera {
       }
       return;
     }
-    if (this.state === SPATIAL_CAMERA_STATES.FOCUSED) return;
+    if (this.state === SPATIAL_CAMERA_STATES.FOCUSED || this.state === SPATIAL_CAMERA_STATES.PASSAGE ||
+      this.state === SPATIAL_CAMERA_STATES.DIVE || this.state === SPATIAL_CAMERA_STATES.PANORAMA) return;
     const factor = this.reducedMotion ? 1 : 1 - Math.exp(-this.damping * dt);
     this.yaw += (this.targetYaw - this.yaw) * factor; this.pitch += (this.targetPitch - this.pitch) * factor;
     this.distance += (this.targetDistance - this.distance) * factor;

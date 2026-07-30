@@ -205,15 +205,20 @@
 
   <section id="m8-experience" class="m8-spatial" aria-hidden="true" inert aria-label="M8 深空空间记忆">
     <span class="m8-spatial__reticle" aria-hidden="true"></span>
-    <div class="m8-spatial__caption">
+    <header class="m8-spatial__heading">
       <p id="m8-entity-index" class="m8-spatial__index">M8 · 0 / 5</p>
       <h2 id="m8-entity-title" class="m8-spatial__title">深空记忆</h2>
+    </header>
+    <div class="m8-spatial__caption">
       <p id="m8-entity-body" class="m8-spatial__body"></p>
       <p id="m8-status" class="m8-spatial__status" role="status" aria-live="polite">移动视角，将记忆置于准星中央。</p>
     </div>
     <div id="m8-progress" class="m8-spatial__progress" aria-hidden="true"></div>
-    <button id="m8-scan-hint" class="m8-spatial__hint" type="button" disabled>SPACE · 扫描记忆</button>
-    <button id="m8-return-overview" class="m8-spatial__return" type="button">返回记忆总览</button>
+    <button id="m8-scan-hint" class="m8-spatial__hint" type="button" disabled>
+      <span class="m8-spatial__desktop-prompt">SPACE · SCAN</span>
+      <span class="m8-spatial__mobile-prompt">HOLD TO SCAN</span>
+    </button>
+    <button id="m8-return-overview" class="m8-spatial__return" type="button"><span aria-hidden="true">◯</span> 返回记忆总览</button>
     <ol id="m8-entity-list" class="m8-spatial__sr-list" aria-label="空间记忆实体"></ol>
   </section>
 
