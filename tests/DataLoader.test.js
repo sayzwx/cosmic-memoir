@@ -229,7 +229,7 @@ describe('DataLoader', () => {
     const results = await loader.preloadImages([memory]);
     const expectedUrls = new Set([
       memory.media.primaryImage,
-      ...memory.media.photos.map(photo => photo.src)
+      ...memory.media.crystalNodes.map(node => node.src)
     ]);
 
     expect(results).toHaveLength(expectedUrls.size);
@@ -274,33 +274,33 @@ describe('DataLoader', () => {
     expect(hidden?.meta?.isHidden).toBe(true);
   });
 
-  it('test_validateSpatialMemoryV2_acceptsM8BeforeMount', () => {
+  it('test_validateCrystalMemoryV3_acceptsM8BeforeMount', () => {
     const memory = memoriesData.memories.find(item => item.experience?.id === 'M8');
 
-    expect(loader.validateSpatialMemoryV2(memory)).toBe(true);
+    expect(loader.validateCrystalMemoryV3(memory)).toBe(true);
     expect(loader.validateUniverse(memoriesData)).toBe(true);
   });
 
   it('test_loadUniverse_rejectsInvalidSpatialContract', async () => {
     const invalid = structuredClone(memoriesData);
-    invalid.memories.find(item => item.experience?.id === 'M8').media.photos[0].position = [0, 0];
+    invalid.memories.find(item => item.experience?.id === 'M8').media.crystalNodes[0].position = [0, 0];
     fetchMock.mockResolvedValueOnce(mockOkResponse(invalid));
 
     await expect(loader.loadUniverse()).rejects.toThrow(/invalid spatial vectors/i);
     expect(loader.cache.has('universe')).toBe(false);
   });
 
-  it('test_validateSpatialMemoryV2_rejectsUnknownUnlockDependency', () => {
+  it('test_validateCrystalMemoryV3_rejectsUnknownUnlockDependency', () => {
     const memory = structuredClone(memoriesData.memories.find(item => item.experience?.id === 'M8'));
-    memory.media.photos[1].unlockAfter = ['missing-entity'];
+    memory.media.crystalNodes[1].unlockAfter = ['missing-entity'];
 
-    expect(() => loader.validateSpatialMemoryV2(memory)).toThrow(/references unknown entity/);
+    expect(() => loader.validateCrystalMemoryV3(memory)).toThrow(/references unknown entity/);
   });
 
-  it('test_validateSpatialMemoryV2_rejectsCyclicUnlockGraph', () => {
+  it('test_validateCrystalMemoryV3_rejectsInitialUnlockDependency', () => {
     const memory = structuredClone(memoriesData.memories.find(item => item.experience?.id === 'M8'));
-    memory.media.photos[0].unlockAfter = ['m8-dawn'];
+    memory.media.crystalNodes[0].unlockAfter = ['m8-dawn'];
 
-    expect(() => loader.validateSpatialMemoryV2(memory)).toThrow(/contains a cycle/);
+    expect(() => loader.validateCrystalMemoryV3(memory)).toThrow(/start spatially unlocked/);
   });
 });

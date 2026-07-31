@@ -2,93 +2,44 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 import { getQualityBudget, MAX_ENVIRONMENT_BUDGET } from './qualityBudgets.js';
 import { createRandom, disposeRenderable } from './math.js';
 
-const VERTEX = `
-  attribute float aLayer;
-  attribute float aSeed;
-  attribute float aSize;
-  attribute vec3 aColor;
-  uniform float uTime;
-  uniform float uPixelRatio;
-  uniform float uMotion;
-  varying vec3 vColor;
-  varying float vAlpha;
-  void main() {
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
-    float wave = sin(uTime * (0.7 + aSeed * 1.9) + aSeed * 91.7);
-    float twinkle = mix(1.0, 0.58 + 0.42 * wave * wave, uMotion);
-    float layerScale = 0.72 + aLayer * 0.28;
-    gl_PointSize = min(8.0, aSize * layerScale * twinkle * uPixelRatio * 520.0 / max(1.0, -mv.z));
-    gl_Position = projectionMatrix * mv;
-    vColor = aColor * (0.82 + twinkle * 0.34);
-    vAlpha = twinkle * (0.62 + aLayer * 0.16);
-  }
-`;
+const VERTEX=`attribute float aLayer,aSeed,aSize;attribute vec3 aColor;
+uniform float uTime,uPixelRatio,uMotion,uMaxSize;uniform vec2 uViewport;varying vec3 vColor;varying float vAlpha,vShape;
+void main(){float speed=.006+aLayer*.016,angle=uTime*speed*uMotion,c=cos(angle),s=sin(angle);
+vec3 p=vec3(position.x*c-position.z*s,position.y,position.x*s+position.z*c);vec4 mv=modelViewMatrix*vec4(p,1.);
+float twinkle=mix(1.,.68+.32*sin(uTime*(.35+aSeed*1.7)+aSeed*57.)*.5+.16,uMotion);
+float viewportScale=clamp(sqrt(uViewport.y/900.),.82,1.16);gl_PointSize=clamp(aSize*twinkle*viewportScale,.5,uMaxSize)*uPixelRatio;
+gl_Position=projectionMatrix*mv;vColor=aColor*(.78+.3*twinkle);vAlpha=(.42+aLayer*.2)*twinkle;vShape=step(.82,aSeed);}`;
+const FRAGMENT=`varying vec3 vColor;varying float vAlpha,vShape;void main(){vec2 p=abs(gl_PointCoord-.5);
+float diamond=p.x+p.y;float cross=min(max(p.x*5.,p.y),max(p.y*5.,p.x));float shape=mix(diamond,min(diamond,cross),vShape);
+if(shape>.5)discard;float aa=max(fwidth(shape)*.7,.025);float edge=1.0-smoothstep(.5-aa,.5,shape);
+gl_FragColor=vec4(vColor,edge*vAlpha);}`;
+const PALETTE=[[.56,.77,1.],[.86,.91,1.],[1.,.86,.65],[.42,.84,1.],[1.,.68,.42]];
 
-const FRAGMENT = `
-  varying vec3 vColor;
-  varying float vAlpha;
-  void main() {
-    float r = length(gl_PointCoord - 0.5) * 2.0;
-    float core = 1.0 - smoothstep(0.0, 0.28, r);
-    float halo = 1.0 - smoothstep(0.15, 1.0, r);
-    float alpha = (core + halo * 0.42) * vAlpha;
-    if (alpha < 0.015) discard;
-    gl_FragColor = vec4(vColor, alpha);
+export function createDeepSpaceField(options={}){
+  const capacity=Math.max(10,Math.min(options.capacity??MAX_ENVIRONMENT_BUDGET.stars,MAX_ENVIRONMENT_BUDGET.stars));
+  const random=createRandom(options.seed??1837),radius=options.radius??2200,positions=new Float32Array(capacity*3);
+  const colors=new Float32Array(capacity*3),layers=new Float32Array(capacity),seeds=new Float32Array(capacity),sizes=new Float32Array(capacity);
+  for(let i=0;i<capacity;i++){
+    const slot=i%10,layer=slot<6?0:slot<9?1:2,range=layer===0?[.78,1.08]:layer===1?[.48,.76]:[.24,.46];
+    const z=random()*2-1,angle=random()*Math.PI*2,planar=Math.sqrt(1-z*z),distance=radius*(range[0]+random()*(range[1]-range[0])),i3=i*3;
+    positions[i3]=Math.cos(angle)*planar*distance;positions[i3+1]=z*distance;positions[i3+2]=Math.sin(angle)*planar*distance;
+    const palette=PALETTE[Math.min(PALETTE.length-1,Math.floor(random()*PALETTE.length))],energy=.82+random()*.3;
+    colors[i3]=palette[0]*energy;colors[i3+1]=palette[1]*energy;colors[i3+2]=palette[2]*energy;
+    layers[i]=layer;seeds[i]=random();const base=layer===0?.5:layer===1?.8:1.15;
+    sizes[i]=Math.min(8,base+Math.pow(random(),layer===2?5:8)*(layer===2?6.85:4.2));
   }
-`;
-
-export function createDeepSpaceField(options = {}) {
-  const capacity = Math.min(options.capacity || MAX_ENVIRONMENT_BUDGET.stars, MAX_ENVIRONMENT_BUDGET.stars);
-  const random = createRandom(options.seed ?? 1837);
-  const positions = new Float32Array(capacity * 3);
-  const colors = new Float32Array(capacity * 3);
-  const layers = new Float32Array(capacity);
-  const seeds = new Float32Array(capacity);
-  const sizes = new Float32Array(capacity);
-  const radius = options.radius || 1900;
-  const palette = [[0.58, 0.72, 1.0], [1.0, 0.9, 0.72], [0.78, 0.86, 1.0]];
-  for (let i = 0; i < capacity; i++) {
-    const i3 = i * 3;
-    const layer = i % 3;
-    const z = random() * 2 - 1;
-    const angle = random() * Math.PI * 2;
-    const planar = Math.sqrt(1 - z * z);
-    const distance = radius * (0.48 + layer * 0.23 + random() * 0.2);
-    positions[i3] = Math.cos(angle) * planar * distance;
-    positions[i3 + 1] = z * distance;
-    positions[i3 + 2] = Math.sin(angle) * planar * distance;
-    const color = palette[random() < 0.16 ? 1 : (random() < 0.28 ? 0 : 2)];
-    const energy = 0.62 + random() * 0.38;
-    colors[i3] = color[0] * energy;
-    colors[i3 + 1] = color[1] * energy;
-    colors[i3 + 2] = color[2] * energy;
-    layers[i] = layer;
-    seeds[i] = random();
-    sizes[i] = 1.4 + Math.pow(random(), 5) * 4.2;
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3));
-  geometry.setAttribute('aLayer', new THREE.BufferAttribute(layers, 1));
-  geometry.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
-  geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
-  const material = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uPixelRatio: { value: options.pixelRatio || 1 }, uMotion: { value: 1 } },
-    vertexShader: VERTEX, fragmentShader: FRAGMENT, transparent: true,
-    depthWrite: false, blending: THREE.AdditiveBlending
-  });
-  const object3D = new THREE.Points(geometry, material);
-  object3D.frustumCulled = false;
-  const api = {
-    object3D, capacity, drawCalls: 1,
-    update(_delta, elapsed) { material.uniforms.uTime.value = elapsed; },
-    setQuality(quality, mobile = false) {
-      geometry.setDrawRange(0, Math.min(capacity, getQualityBudget(quality, mobile).stars));
-    },
-    setPixelRatio(value) { material.uniforms.uPixelRatio.value = Math.min(value || 1, 2); },
-    setReducedMotion(value) { material.uniforms.uMotion.value = value ? 0 : 1; },
-    dispose() { disposeRenderable(object3D); }
-  };
-  api.setQuality(options.quality, options.mobile);
-  return api;
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+  geometry.setAttribute('aColor',new THREE.BufferAttribute(colors,3));geometry.setAttribute('aLayer',new THREE.BufferAttribute(layers,1));
+  geometry.setAttribute('aSeed',new THREE.BufferAttribute(seeds,1));geometry.setAttribute('aSize',new THREE.BufferAttribute(sizes,1));
+  const uniforms={uTime:{value:0},uPixelRatio:{value:options.pixelRatio??1},uMotion:{value:1},uMaxSize:{value:options.mobile?6:8},uViewport:{value:new THREE.Vector2(1920,1080)}};
+  const material=new THREE.ShaderMaterial({uniforms,vertexShader:VERTEX,fragmentShader:FRAGMENT,transparent:true,depthWrite:false,
+    blending:THREE.AdditiveBlending,extensions:{derivatives:true}});
+  const object3D=new THREE.Points(geometry,material);object3D.frustumCulled=false;
+  const api={object3D,capacity,drawCalls:1,
+    update(delta=0,elapsed){uniforms.uTime.value=Number.isFinite(elapsed)?elapsed:uniforms.uTime.value+delta;},
+    setQuality(quality='high',mobile=false){const budget=getQualityBudget(quality,mobile);geometry.setDrawRange(0,Math.min(capacity,budget.stars));uniforms.uMaxSize.value=mobile?6:8;},
+    setPixelRatio(value=1){uniforms.uPixelRatio.value=THREE.MathUtils.clamp(value||1,.5,2);},
+    setViewport(width=1920,height=1080,mobile){uniforms.uViewport.value.set(Math.max(1,width),Math.max(1,height));if(typeof mobile==='boolean')uniforms.uMaxSize.value=mobile?6:8;},
+    setReducedMotion(value=true){uniforms.uMotion.value=value?0:1;},dispose(){disposeRenderable(object3D);}};
+  api.setQuality(options.quality,options.mobile);return api;
 }

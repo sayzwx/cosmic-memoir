@@ -3,7 +3,7 @@
  *
  * 测试覆盖：
  * - on('scroll', cb) + wheel 事件 -> cb 收到 {deltaY, deltaX}
- * - on('dragStart', cb) + mousedown -> cb 被调用
+ * - on('dragStart', cb) + mousedown + threshold move -> cb 被调用
  * - on('drag', cb) + mousedown + mousemove -> cb 收到 deltaX/deltaY
  * - on('dragEnd', cb) + mouseup -> cb 收到 totalDeltaX/totalDeltaY
  * - on('tap', cb) + click（非拖拽）-> cb 被调用
@@ -102,11 +102,12 @@ describe('InputAdapter', () => {
 
   // ─── dragStart ───
 
-  it('test_onDragStart_mousedown_triggersCallback', () => {
+  it('test_onDragStart_thresholdMove_triggersCallback', () => {
     const cb = vi.fn();
     adapter.on('dragStart', cb);
 
     dispatchMouseDown(100, 200);
+    dispatchMouseMove(106, 200);
 
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb).toHaveBeenCalledWith({ x: 100, y: 200 });
@@ -160,14 +161,14 @@ describe('InputAdapter', () => {
     expect(dragEndCb).toHaveBeenCalledWith({ totalDeltaX: 30, totalDeltaY: 20 });
   });
 
-  it('test_onDragEnd_noMove_totalDeltaIsZero', () => {
+  it('test_onDragEnd_noMove_doesNotStartDrag', () => {
     const dragEndCb = vi.fn();
     adapter.on('dragEnd', dragEndCb);
 
     dispatchMouseDown(100, 100);
     dispatchMouseUp(100, 100);
 
-    expect(dragEndCb).toHaveBeenCalledWith({ totalDeltaX: 0, totalDeltaY: 0 });
+    expect(dragEndCb).not.toHaveBeenCalled();
   });
 
   // ─── tap ───

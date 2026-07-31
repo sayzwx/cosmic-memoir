@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { CelestialRenderer } from '../core/CelestialRenderer.js';
+import { createDeepSpaceBackground } from '../core/DeepSpaceBackground.js';
 
 export class RocheLimitRenderer extends CelestialRenderer {
   constructor(canvas, data, options = {}) {
@@ -13,6 +14,7 @@ export class RocheLimitRenderer extends CelestialRenderer {
     this.lightBridge = null;
     this.debris = null;
     this.starfield = null;
+    this.deepSpace = null;
     this.draggedSecondary = false;
     this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     this.raycaster = new THREE.Raycaster();
@@ -40,6 +42,13 @@ export class RocheLimitRenderer extends CelestialRenderer {
     this._createPrimary(p);
     this._createSecondary(p);
     this._createStarfield(1000);
+
+    this.deepSpace = createDeepSpaceBackground({
+      starCount: 5000, dustCount: 1500, starRadius: 3000,
+      dustExtent: [1400, 600, 900], dustPosition: [0, 0, -800],
+      pixelRatio: this.renderer.getPixelRatio()
+    });
+    this.scene.add(this.deepSpace.object3D);
 
     this.camera.position.set(0, 0, 700);
     this.camera.lookAt(0, 0, 0);
@@ -418,6 +427,10 @@ export class RocheLimitRenderer extends CelestialRenderer {
       }
     }
 
+    if (this.deepSpace) {
+      this.deepSpace.update(deltaTime, elapsedTime);
+    }
+
     if (this.starfield) {
       this.starfield.rotation.y += deltaTime * 0.002;
     }
@@ -430,5 +443,14 @@ export class RocheLimitRenderer extends CelestialRenderer {
     if (this.debris && quality === 'low') {
       this.debris.material.size = 1.5;
     }
+  }
+
+  destroy() {
+    if (this.deepSpace) {
+      this.scene.remove(this.deepSpace.object3D);
+      this.deepSpace.dispose();
+      this.deepSpace = null;
+    }
+    super.destroy();
   }
 }

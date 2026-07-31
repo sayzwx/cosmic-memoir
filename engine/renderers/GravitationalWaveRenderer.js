@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { CelestialRenderer } from '../core/CelestialRenderer.js';
+import { createDeepSpaceBackground } from '../core/DeepSpaceBackground.js';
 
 export class GravitationalWaveRenderer extends CelestialRenderer {
   constructor(canvas, data, options = {}) {
@@ -13,6 +14,7 @@ export class GravitationalWaveRenderer extends CelestialRenderer {
     this.debris = null;
     this.ripples = [];
     this.starfield = null;
+    this.deepSpace = null;
     this.orbitRadius = 200;
     this.minOrbitRadius = 30;
     this.orbitalAngle = 0;
@@ -39,6 +41,13 @@ export class GravitationalWaveRenderer extends CelestialRenderer {
     this._createBinarySystem(p);
     this._createDebrisField(200);
     this._createStarfield(1500);
+
+    this.deepSpace = createDeepSpaceBackground({
+      starCount: 5000, dustCount: 1500, starRadius: 3000,
+      dustExtent: [1400, 600, 900], dustPosition: [0, 0, -800],
+      pixelRatio: this.renderer.getPixelRatio()
+    });
+    this.scene.add(this.deepSpace.object3D);
 
     this.camera.position.set(0, 0, 600);
     this.camera.lookAt(0, 0, 0);
@@ -361,6 +370,10 @@ export class GravitationalWaveRenderer extends CelestialRenderer {
       this.secondary.rotation.y -= deltaTime * 2;
     }
 
+    if (this.deepSpace) {
+      this.deepSpace.update(deltaTime, elapsedTime);
+    }
+
     if (this.starfield) {
       this.starfield.rotation.y += deltaTime * 0.002;
     }
@@ -377,5 +390,14 @@ export class GravitationalWaveRenderer extends CelestialRenderer {
     if (this.debris) {
       this.debris.material.size = quality === 'low' ? 1.5 : 2.5;
     }
+  }
+
+  destroy() {
+    if (this.deepSpace) {
+      this.scene.remove(this.deepSpace.object3D);
+      this.deepSpace.dispose();
+      this.deepSpace = null;
+    }
+    super.destroy();
   }
 }

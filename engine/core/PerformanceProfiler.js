@@ -8,6 +8,7 @@ export class PerformanceProfiler {
     this.maxFrames = 30;
     this.isMeasuring = false;
     this._rafId = null;
+    this._framesSincePerformanceSample = 0;
 
     this._sampleBound = this._sample.bind(this);
   }
@@ -17,6 +18,7 @@ export class PerformanceProfiler {
     this.isMeasuring = true;
     this.lastSampleTime = performance.now();
     this.frames = [];
+    this._framesSincePerformanceSample = 0;
     this._rafId = requestAnimationFrame(this._sampleBound);
   }
 
@@ -30,6 +32,7 @@ export class PerformanceProfiler {
     if (delta > 0) {
       const currentFps = 1000 / delta;
       this.frames.push(currentFps);
+      this._framesSincePerformanceSample++;
 
       if (this.frames.length > this.maxFrames) {
         this.frames.shift();
@@ -51,6 +54,15 @@ export class PerformanceProfiler {
         if (newQuality !== this.quality) {
           this.quality = newQuality;
           this.emit('qualityChange', { quality: newQuality, fps: avgFps });
+        }
+
+        if (this._framesSincePerformanceSample >= this.maxFrames) {
+          this._framesSincePerformanceSample = 0;
+          this.emit('performanceSample', {
+            fps: avgFps,
+            quality: this.quality,
+            timestamp: now
+          });
         }
       }
     }

@@ -1,5 +1,6 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import { CelestialRenderer } from '../core/CelestialRenderer.js';
+import { createDeepSpaceBackground } from '../core/DeepSpaceBackground.js';
 
 export class EventHorizonRenderer extends CelestialRenderer {
   constructor(canvas, data, options = {}) {
@@ -14,6 +15,7 @@ export class EventHorizonRenderer extends CelestialRenderer {
     this.accretionDisk = null;
     this.photonSphere = null;
     this.starfield = null;
+    this.deepSpace = null;
     this.ambientParticles = null;
     this.ambientVelocities = null;
     this.renderTarget = null;
@@ -63,6 +65,14 @@ export class EventHorizonRenderer extends CelestialRenderer {
     this._createPhotonSphere(Math.max(0.001, p.photonSphereRadius));
     this._createStarfield(2000);
     this._createAmbientParticles(ic.ambientParticles || 150);
+
+    this.deepSpace = createDeepSpaceBackground({
+      starCount: 5000, dustCount: 1500, starRadius: 3000,
+      dustExtent: [1400, 600, 900], dustPosition: [0, 0, -800],
+      pixelRatio: this.renderer.getPixelRatio()
+    });
+    this.scene.add(this.deepSpace.object3D);
+
     this._setupPostProcessing(w, h, p, lensingFragFull);
 
     this.cameraStartZ = camStart.position ? camStart.position[2] : 800;
@@ -250,6 +260,10 @@ export class EventHorizonRenderer extends CelestialRenderer {
       this.blackHole.material.uniforms.uScrollProgress.value = this.scrollProgress;
     }
 
+    if (this.deepSpace) {
+      this.deepSpace.update(deltaTime, elapsedTime);
+    }
+
     if (this.starfield) {
       this.starfield.rotation.y += deltaTime * 0.005;
     }
@@ -363,6 +377,11 @@ export class EventHorizonRenderer extends CelestialRenderer {
   }
 
   destroy() {
+    if (this.deepSpace) {
+      this.scene.remove(this.deepSpace.object3D);
+      this.deepSpace.dispose();
+      this.deepSpace = null;
+    }
     super.destroy();
   }
 }

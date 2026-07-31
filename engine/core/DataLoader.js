@@ -66,8 +66,9 @@ export class DataLoader {
         if (memory.media.thumbnail) {
           imageUrls.push(memory.media.thumbnail);
         }
-        if (Array.isArray(memory.media.photos)) {
-          memory.media.photos.forEach(photo => {
+        const photos = memory.media.crystalNodes ?? memory.media.photos;
+        if (Array.isArray(photos)) {
+          photos.forEach(photo => {
             if (photo?.src) imageUrls.push(photo.src);
             if (photo?.previewSrc) imageUrls.push(photo.previewSrc);
           });
@@ -94,7 +95,7 @@ export class DataLoader {
   }
 
   getPhotoByRole(memory, role) {
-    const photos = memory?.media?.photos;
+    const photos = memory?.media?.crystalNodes ?? memory?.media?.photos;
     if (!Array.isArray(photos)) return null;
     return photos.find(photo => photo?.role === role && photo.src) || null;
   }
@@ -112,58 +113,61 @@ export class DataLoader {
     }
     data.memories.forEach(memory => {
       if (memory?.experience?.id === 'M8' ||
-          memory?.experience?.variant === 'deepSpaceSpatialMemory') {
-        this.validateSpatialMemoryV2(memory);
+          memory?.experience?.variant === 'darkMatterCosmicWeb') {
+        this.validateCrystalMemoryV3(memory);
       }
     });
     return true;
   }
 
-  validateSpatialMemoryV2(memory) {
+  validateCrystalMemoryV3(memory) {
     const fail = message => {
-      throw new Error(`Invalid spatial-memory v2 (${memory?.id || 'unknown'}): ${message}`);
+      throw new Error(`Invalid M8 crystal-memory v3 (${memory?.id || 'unknown'}): ${message}`);
     };
     const experience = memory?.experience;
-    const photos = memory?.media?.photos;
+    const nodes = memory?.media?.crystalNodes;
+    const crystalTypes = ['corePrism', 'twinLens', 'darkWebPrison', 'planetAnchor', 'finalSingularity'];
     if (!experience || experience.id !== 'M8' ||
-        experience.variant !== 'deepSpaceSpatialMemory' || experience.version !== 2) {
-      fail('experience must identify M8/deepSpaceSpatialMemory version 2');
+        experience.variant !== 'darkMatterCosmicWeb' || experience.version !== 3) {
+      fail('experience must identify M8/darkMatterCosmicWeb version 3');
     }
-    if (!Array.isArray(photos) || photos.length !== 5) fail('exactly five photo entities are required');
-    if (!Array.isArray(experience.entityOrder) || experience.entityOrder.length !== photos.length) {
-      fail('entityOrder must contain every photo entity');
+    if (!Array.isArray(nodes) || nodes.length !== 5) fail('exactly five crystal nodes are required');
+    if (!Array.isArray(experience.entityOrder) || experience.entityOrder.length !== nodes.length) {
+      fail('entityOrder must contain every crystal node');
     }
 
-    const ids = photos.map(photo => photo?.id);
+    const ids = nodes.map(node => node?.id);
     if (ids.some(id => typeof id !== 'string' || !id.trim()) || new Set(ids).size !== ids.length) {
-      fail('photo entity ids must be non-empty and unique');
+      fail('crystal node ids must be non-empty and unique');
+    }
+    const configuredTypes = nodes.map(node => node?.crystalType);
+    if (new Set(configuredTypes).size !== crystalTypes.length ||
+        crystalTypes.some(type => !configuredTypes.includes(type))) {
+      fail(`crystalType must contain exactly one of each: ${crystalTypes.join(', ')}`);
     }
     if (new Set(experience.entityOrder).size !== ids.length ||
         experience.entityOrder.some(id => !ids.includes(id))) {
-      fail('entityOrder must be a unique permutation of photo entity ids');
+      fail('entityOrder must be a unique permutation of crystal node ids');
     }
 
     const vector = (value, length) => Array.isArray(value) && value.length === length &&
       value.every(Number.isFinite);
-    photos.forEach(photo => {
-      ['title', 'body', 'role', 'src', 'alt', 'caption', 'accent'].forEach(field => {
-        if (typeof photo?.[field] !== 'string' || !photo[field].trim()) fail(`${photo?.id || 'photo'}.${field} is required`);
+    nodes.forEach(node => {
+      ['title', 'body', 'role', 'src', 'alt', 'caption', 'energyColor', 'unfoldText'].forEach(field => {
+        if (typeof node?.[field] !== 'string' || !node[field].trim()) fail(`${node?.id || 'node'}.${field} is required`);
       });
-      if (!vector(photo.position, 3) || !vector(photo.rotation, 3) ||
-          !vector(photo.size, 2) || !vector(photo.focusOffset, 3)) {
-        fail(`${photo.id} has invalid spatial vectors`);
+      if (!vector(node.position, 3) || !vector(node.rotation, 3) ||
+          !vector(node.size, 2) || !vector(node.focusOffset, 3)) {
+        fail(`${node.id} has invalid spatial vectors`);
       }
-      if (photo.size.some(value => value <= 0)) fail(`${photo.id}.size values must be positive`);
-      if (!Number.isFinite(photo.lensingStrength) || photo.lensingStrength < 0) {
-        fail(`${photo.id}.lensingStrength must be a non-negative number`);
-      }
-      if (!Array.isArray(photo.unlockAfter)) fail(`${photo.id}.unlockAfter must be an array`);
-      if (typeof photo.discovery?.type !== 'string' || !photo.discovery.type.trim()) {
-        fail(`${photo.id}.discovery.type is required`);
+      if (node.size.some(value => value <= 0)) fail(`${node.id}.size values must be positive`);
+      if (!Array.isArray(node.unlockAfter)) fail(`${node.id}.unlockAfter must be an array`);
+      if (typeof node.discovery?.type !== 'string' || !node.discovery.type.trim()) {
+        fail(`${node.id}.discovery.type is required`);
       }
     });
 
-    const dependencies = new Map(photos.map(photo => [photo.id, photo.unlockAfter]));
+    const dependencies = new Map(nodes.map(node => [node.id, node.unlockAfter]));
     dependencies.forEach((requiredIds, id) => requiredIds.forEach(requiredId => {
       if (!dependencies.has(requiredId)) fail(`${id}.unlockAfter references unknown entity ${requiredId}`);
       if (requiredId === id) fail(`${id} cannot unlock after itself`);
@@ -179,6 +183,11 @@ export class DataLoader {
       visited.add(id);
     };
     ids.forEach(visit);
+    const finalNode = nodes.find(node => node.crystalType === 'finalSingularity');
+    if (finalNode?.discovery?.requiresZoom !== true) fail('finalSingularity.discovery.requiresZoom must be true');
+    if (finalNode?.hidden !== true) fail('finalSingularity must start hidden');
+    if (nodes.some(node => node !== finalNode && node.hidden === true)) fail('only finalSingularity may start hidden');
+    if (nodes.some(node => node.unlockAfter.length !== 0)) fail('all crystal nodes must start spatially unlocked');
     return true;
   }
 

@@ -199,28 +199,28 @@ describe('memories.json data integrity', () => {
     expect(uniqueIds.size).toBe(ids.length);
   });
 
-  it('test_m8PhotoRolesAreCompleteAndUnique', () => {
+  it('test_m8CrystalNodeRolesAreCompleteAndUnique', () => {
     const memory = memories.find(item => item.id === 'mem_1995_shadow');
-    const photos = memory.media.photos;
+    const nodes = memory.media.crystalNodes;
     const expectedRoles = ['cover', 'letter', 'hiddenMemory', 'lensReflection', 'epilogue'];
 
-    expect(photos).toHaveLength(expectedRoles.length);
-    expect(new Set(photos.map(photo => photo.role))).toEqual(new Set(expectedRoles));
-    photos.forEach(photo => {
-      expect(photo.src).toMatch(/^\.\/assets\/memories\/m8\/.+\.(svg|webp|avif)$/);
-      expect(photo.alt.trim().length).toBeGreaterThan(0);
-      expect(photo.caption.trim().length).toBeGreaterThan(0);
+    expect(nodes).toHaveLength(expectedRoles.length);
+    expect(new Set(nodes.map(node => node.role))).toEqual(new Set(expectedRoles));
+    nodes.forEach(node => {
+      expect(node.src).toMatch(/^\.\/assets\/memories\/m8\/.+\.(svg|webp|avif)$/);
+      expect(node.alt.trim().length).toBeGreaterThan(0);
+      expect(node.caption.trim().length).toBeGreaterThan(0);
     });
   });
 
-  it('test_m8DeclaresExplicitSpatialMemoryV2Experience', () => {
+  it('test_m8DeclaresExplicitCrystalMemoryV3Experience', () => {
     const memory = memories.find(item => item.id === 'mem_1995_shadow');
-    const ids = memory.media.photos.map(photo => photo.id);
+    const ids = memory.media.crystalNodes.map(node => node.id);
 
     expect(memory.experience).toEqual({
       id: 'M8',
-      variant: 'deepSpaceSpatialMemory',
-      version: 2,
+      variant: 'darkMatterCosmicWeb',
+      version: 3,
       entityOrder: ids
     });
     expect(memories.filter(item => item.experience?.id === 'M8')).toHaveLength(1);
@@ -228,31 +228,31 @@ describe('memories.json data integrity', () => {
 
   it('test_m8HasExactlyFiveCompleteSpatialEntities', () => {
     const memory = memories.find(item => item.experience?.id === 'M8');
-    const photos = memory.media.photos;
+    const nodes = memory.media.crystalNodes;
 
-    expect(photos).toHaveLength(5);
-    expect(new Set(photos.map(photo => photo.id)).size).toBe(5);
-    photos.forEach(photo => {
-      ['id', 'title', 'body', 'role', 'src', 'alt', 'caption', 'accent'].forEach(field => {
-        expect(typeof photo[field]).toBe('string');
-        expect(photo[field].trim().length).toBeGreaterThan(0);
+    expect(nodes).toHaveLength(5);
+    expect(new Set(nodes.map(node => node.id)).size).toBe(5);
+    nodes.forEach(node => {
+      ['id', 'title', 'body', 'role', 'src', 'alt', 'caption', 'energyColor', 'crystalType'].forEach(field => {
+        expect(typeof node[field]).toBe('string');
+        expect(node[field].trim().length).toBeGreaterThan(0);
       });
-      expect(photo.position).toHaveLength(3);
-      expect(photo.rotation).toHaveLength(3);
-      expect(photo.size).toHaveLength(2);
-      expect(photo.focusOffset).toHaveLength(3);
-      expect([...photo.position, ...photo.rotation, ...photo.size, ...photo.focusOffset]
+      expect(node.position).toHaveLength(3);
+      expect(node.rotation).toHaveLength(3);
+      expect(node.size).toHaveLength(2);
+      expect(node.focusOffset).toHaveLength(3);
+      expect([...node.position, ...node.rotation, ...node.size, ...node.focusOffset]
         .every(Number.isFinite)).toBe(true);
-      expect(photo.size.every(value => value > 0)).toBe(true);
-      expect(Array.isArray(photo.unlockAfter)).toBe(true);
-      expect(photo.lensingStrength).toBeGreaterThanOrEqual(0);
-      expect(typeof photo.discovery.type).toBe('string');
+      expect(node.size.every(value => value > 0)).toBe(true);
+      expect(Array.isArray(node.unlockAfter)).toBe(true);
+      expect(node.lensingStrength).toBeGreaterThanOrEqual(0);
+      expect(typeof node.discovery.type).toBe('string');
     });
   });
 
   it('test_m8UnlockGraphReferencesEntitiesAndIsAcyclic', () => {
-    const photos = memories.find(item => item.experience?.id === 'M8').media.photos;
-    const dependencies = new Map(photos.map(photo => [photo.id, photo.unlockAfter]));
+    const nodes = memories.find(item => item.experience?.id === 'M8').media.crystalNodes;
+    const dependencies = new Map(nodes.map(node => [node.id, node.unlockAfter]));
     dependencies.forEach(required => required.forEach(id => expect(dependencies.has(id)).toBe(true)));
     const visiting = new Set();
     const visited = new Set();
@@ -268,20 +268,20 @@ describe('memories.json data integrity', () => {
     expect(visited.size).toBe(5);
   });
 
-  it('test_m8KeepsLocalPhotoPathsAndLegacyMediaFields', () => {
+  it('test_m8KeepsLocalCrystalNodePathsAndMediaFields', () => {
     const memory = memories.find(item => item.experience?.id === 'M8');
     expect(memory.media.hiddenMemoryId).toBe('mem_1998_humidity');
-    expect(memory.media.photos.map(photo => photo.src)).toEqual([
+    expect(memory.media.crystalNodes.map(node => node.src)).toEqual([
       './assets/memories/m8/cover-orbit.svg',
       './assets/memories/m8/letter-window.svg',
       './assets/memories/m8/hidden-summer.svg',
       './assets/memories/m8/lens-reflection.svg',
       './assets/memories/m8/epilogue-dawn.svg'
     ]);
-    memory.media.photos.forEach(photo => {
-      expect(photo).toHaveProperty('role');
-      expect(photo).toHaveProperty('alt');
-      expect(photo).toHaveProperty('caption');
+    memory.media.crystalNodes.forEach(node => {
+      expect(node).toHaveProperty('role');
+      expect(node).toHaveProperty('alt');
+      expect(node).toHaveProperty('caption');
     });
   });
 

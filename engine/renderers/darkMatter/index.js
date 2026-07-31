@@ -1,9 +1,11 @@
-export { createDarkMatterEnvironment } from './DarkMatterEnvironment.js';
 export { createDeepSpaceField } from './DeepSpaceField.js';
-export { createSpiralGalaxy } from './SpiralGalaxy.js';
-export { createAtmosphericPlanet } from './AtmosphericPlanet.js';
-export { createNebulaDust } from './NebulaDust.js';
-export { createCosmicWeb } from './CosmicWeb.js';
+export { createCosmicVolumeBackdrop } from './CosmicVolumeBackdrop.js';
+export { MemoryCarrier, MEMORY_CARRIER_STATES, CARRIER_STATES, loadCarrierTexture } from './MemoryCarrier.js';
+export { CrystalMemoryNode, CRYSTAL_TYPES } from './CrystalMemoryNode.js';
+export { createSharpCosmicWeb } from './SharpCosmicWeb.js';
+export { createSharpSpiralGalaxy } from './SharpSpiralGalaxy.js';
+export { createRibbonNebulaClusters } from './RibbonNebulaClusters.js';
+export { createHexScanWave } from './HexScanWave.js';
 export {
   QUALITY_BUDGETS,
   MOBILE_CAP,

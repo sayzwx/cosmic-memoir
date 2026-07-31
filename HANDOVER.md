@@ -7,7 +7,7 @@ Vite multi-page site:
 - Login: React + React Three Fiber, `index.html`
 - Memoir: Canvas/WebGL page, `universe.html`
 - Online: https://sayzwx.github.io/cosmic-memoir/
-- Local: `npm run dev` on `http://127.0.0.1:5174/`
+- Local: `npm run dev` on `http://127.0.0.1:5173/`
 
 ## Current Login Experience
 
@@ -55,12 +55,12 @@ Vite multi-page site:
 
 ## Current Main Page Phase
 
-- Status: planning and optimization started.
+- Status: M8 v3 visual optimization completed and published to `gh-pages`.
 - Module map: `docs/MAIN_PAGE_MODULES.md`.
 - M2 narrative UI specification: `docs/M2_NARRATIVE_UI_SPEC.md` (approved, awaiting implementation).
-- M8 dark-matter chapter: cinematic spatial-memory v2 implemented with a GPU-batched deep-space environment, orbital camera, five spatial photo entities, mobile/desktop quality tiers, and local replaceable placeholders under `assets/memories/m8/`.
+- M8 dark-matter chapter: `darkMatterCosmicWeb` v3 uses a dynamic volumetric cosmic backdrop, enhanced spiral galaxy, five crystal memory nodes, mobile/desktop quality tiers, and local replaceable assets under `assets/memories/m8/`.
 - Planning is split into page experience, journey and controls, content system, shared rendering foundation, and five independent chapter scenes.
-- Current full Chinese handover: `docs/HANDOVER_2026-07-29.md`.
+- Current full Chinese handover: `docs/HANDOVER_2026-07-29.md` (updated 2026-07-31).
 
 ## Commands
 
@@ -77,6 +77,8 @@ npx gh-pages -d dist -b gh-pages -m "deploy: message"
 - Latest `npm run build`: passed
 - Latest `npm test`: passed (93/93)
 - M8 JavaScript syntax and data-contract checks: passed
+- Published branch: `gh-pages`
+- Online URL: https://sayzwx.github.io/cosmic-memoir/
 
 ## Caution
 
