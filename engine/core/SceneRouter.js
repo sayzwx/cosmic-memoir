@@ -1,6 +1,6 @@
 const RendererRegistry = {
   darkMatter: async () => {
-    const { DarkMatterRenderer } = await import('../renderers/DarkMatterRenderer.js');
+    const { DarkMatterRenderer } = await import('../renderers/DarkMatterRenderer.js?v=m8-v3-2');
     return DarkMatterRenderer;
   },
   redshift: async () => {
