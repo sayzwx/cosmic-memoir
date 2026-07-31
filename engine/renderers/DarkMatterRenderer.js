@@ -75,7 +75,7 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
-    this.scene.background = new THREE.Color(0x01020a);
+    this.scene.background = new THREE.Color(0x020313);
     this._applyPixelRatio();
     this._createEnvironment();
     this._createNodes();
@@ -129,7 +129,7 @@ export class DarkMatterRenderer extends CelestialRenderer {
     this.galaxy = createSharpSpiralGalaxy({
       quality: this.quality, mobile: this.mobile, capacity: MAX_ENVIRONMENT_BUDGET.galaxy,
       radius: 8.4, position: [0, -0.35, -19], inclination: 0.52,
-      yaw: -0.08, roll: 0.42, rotationSpeed: Math.PI * 2 / 230,
+      yaw: -0.08, roll: 0.42, rotationSpeed: Math.PI * 2 / 205,
       haloMinOpacity: 0.025, haloMaxOpacity: 0.1,
       pixelRatio: this.renderer.getPixelRatio()
     });

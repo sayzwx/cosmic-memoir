@@ -3,9 +3,6 @@
   var LOGIN_TIME_KEY = 'cm_loginTime';
   var SESSION_TIMEOUT = 3600000;
 
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(LOGIN_TIME_KEY);
-
   var token = sessionStorage.getItem(TOKEN_KEY);
   var loginTime = parseInt(sessionStorage.getItem(LOGIN_TIME_KEY) || '0', 10);
 

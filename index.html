@@ -34,17 +34,12 @@
       if (window.location.search.indexOf('logout') !== -1) {
         sessionStorage.removeItem(TOKEN_KEY);
         sessionStorage.removeItem(LOGIN_TIME_KEY);
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(LOGIN_TIME_KEY);
         localStorage.removeItem(FAILED_KEY);
         localStorage.removeItem(LOCK_KEY);
         window.location.replace(window.location.pathname);
         return;
       }
 
-      // Authentication lasts only for this tab. Closing it requires a new login.
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(LOGIN_TIME_KEY);
       var token = sessionStorage.getItem(TOKEN_KEY);
       var loginTime = sessionStorage.getItem(LOGIN_TIME_KEY);
 
@@ -52,38 +47,14 @@
         var elapsed = Date.now() - parseInt(loginTime, 10);
         if (elapsed < SESSION_TIMEOUT) {
           window.location.replace('./universe.html');
-        } else {
-          sessionStorage.removeItem(TOKEN_KEY);
-          sessionStorage.removeItem(LOGIN_TIME_KEY);
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(LOGIN_TIME_KEY);
         }
       }
     })();
   </script>
-  <script>
-    // The archived login bundle starts a four-second tunnel but redirects after
-    // 1.2 seconds. Extend only that legacy transition timer before it loads.
-    (function () {
-      var nativeSetTimeout = window.setTimeout;
-      var nativeStorageSetItem = Storage.prototype.setItem;
-
-      // The archived bundle writes auth to both stores. Keep credentials and
-      // tokens out of persistent storage so reopening always starts at login.
-      Storage.prototype.setItem = function (key, value) {
-        if (this !== localStorage || (key !== 'cm_token' && key !== 'cm_loginTime')) {
-          nativeStorageSetItem.call(this, key, value);
-        }
-      };
-      window.setTimeout = function (callback, delay) {
-        return nativeSetTimeout.call(window, callback, delay === 1200 ? 4200 : delay);
-      };
-    })();
-  </script>
-  <script type="module" crossorigin src="./assets/index-BGHynaiA.js"></script>
+  <script type="module" crossorigin src="./assets/index-DbPobqx8.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-CstZTXpl.css">
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root"></div>
 </body>
 </html>

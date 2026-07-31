@@ -203,7 +203,7 @@ class WormholeAnimation {
                 this.progress = 1;
                 this.phase = 'exit';
                 setTimeout(() => {
-                    window.location.replace('./universe.html');
+                    window.location.href = './universe.html';
                 }, 500);
             }
         }
