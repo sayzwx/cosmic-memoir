@@ -60,6 +60,16 @@
       }
     })();
   </script>
+  <script>
+    // The archived login bundle starts a four-second tunnel but redirects after
+    // 1.2 seconds. Extend only that legacy transition timer before it loads.
+    (function () {
+      var nativeSetTimeout = window.setTimeout;
+      window.setTimeout = function (callback, delay) {
+        return nativeSetTimeout.call(window, callback, delay === 1200 ? 4200 : delay);
+      };
+    })();
+  </script>
   <script type="module" crossorigin src="./assets/index-BGHynaiA.js"></script>
   <link rel="stylesheet" crossorigin href="./assets/index-CstZTXpl.css">
 </head>
