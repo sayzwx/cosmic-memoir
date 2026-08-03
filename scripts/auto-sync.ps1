@@ -1,5 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
+# Auto-sync is intentionally disabled. Keep the scheduled task harmless until
+# it is explicitly re-enabled by removing this guard.
+exit 0
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
 # Rebase first so scheduled pushes do not overwrite remote work.
